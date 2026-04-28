@@ -41,9 +41,9 @@ JOIN_WINDOW_SECONDS = int(os.getenv("JOIN_WINDOW_SECONDS",60))
 QUESTION_TIMER_SECONDS = int(os.getenv("JOIN_WINDOW_SECONDS",35))
 LEADERBOARD_DISPLAY_SECONDS = int(os.getenv("LEADERBOARD_DISPLAY_SECONDS",6))
 SPEED_BONUS_MULTIPLIER = float(os.getenv("SPEED_BONUS_MULTIPLIER",0.05))
-MAX_CONCURRENT_GAMES = int(os.getenv("MAX_CONCURRENT_GAMES",5))          # hard cap on simultaneous active games
-MAX_PLAYERS_PER_GAME = int(os.getenv("MAX_PLAYERS_PER_GAME",100))        # hard cap on players per game
-ALL_ANSWERED_WAIT_SECONDS = int(os.getenv("ALL_ANSWERED_WAIT_SECONDS",100))   # pause after all players answer early
+MAX_CONCURRENT_GAMES = int(os.getenv("MAX_CONCURRENT_GAMES",5))           # hard cap on simultaneous active games
+MAX_PLAYERS_PER_GAME = int(os.getenv("MAX_PLAYERS_PER_GAME",100))         # hard cap on players per game
+ALL_ANSWERED_WAIT_SECONDS = int(os.getenv("ALL_ANSWERED_WAIT_SECONDS",2)) # pause after all players answer early
 
 # ── Game state ────────────────────────────────────────────────────────────────
 # game_id -> GameState
@@ -212,16 +212,17 @@ async def run_game(game: GameState):
             if game.phase == "ended":
                 return
             elapsed = time.time() - q_start
-            # Only count players who are currently connected
-            active_pids = set(game.connections.keys())
-            all_answered = (
-                len(active_pids) > 0
-                and all(
-                    game.players[pid].answered_current
-                    for pid in active_pids
-                    if pid in game.players
+            # Read player state under lock to avoid race with submit_answer
+            async with game.lock:
+                active_pids = set(game.connections.keys())
+                all_answered = (
+                    len(active_pids) > 0
+                    and all(
+                        game.players[pid].answered_current
+                        for pid in active_pids
+                        if pid in game.players
+                    )
                 )
-            )
             if all_answered:
                 early_exit = True
                 break
@@ -235,6 +236,10 @@ async def run_game(game: GameState):
                 "wait_seconds": ALL_ANSWERED_WAIT_SECONDS,
             })
             await asyncio.sleep(ALL_ANSWERED_WAIT_SECONDS)
+
+        # Yield to the event loop so any pending submit_answer coroutines
+        # can finish releasing the lock before we try to acquire it below
+        await asyncio.sleep(0)
 
         # Reveal answer & compute scores
         async with game.lock:
