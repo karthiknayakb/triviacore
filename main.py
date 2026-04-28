@@ -37,7 +37,7 @@ questions_path = Path(__file__).parent / "questions.json"
 ALL_QUESTIONS: List[dict] = json.loads(questions_path.read_text())
 
 # ── Constants ─────────────────────────────────────────────────────────────────
-JOIN_WINDOW_SECONDS = 25
+JOIN_WINDOW_SECONDS = 60
 QUESTION_TIMER_SECONDS = 35
 LEADERBOARD_DISPLAY_SECONDS = 6
 SPEED_BONUS_MULTIPLIER = 0.05
