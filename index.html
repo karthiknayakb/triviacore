@@ -598,6 +598,40 @@
       border: 1.5px solid var(--border);
     }
     .btn-ghost:hover { border-color: var(--grey); color: var(--white); }
+    /* ── Rejoin screen ─────────────────────────────────── */
+    .rejoin-card {
+      text-align: center;
+    }
+    .rejoin-card .rejoin-icon { font-size: 2.8rem; margin-bottom: 10px; }
+    .rejoin-card h2 {
+      font-size: 1.2rem; font-weight: 900;
+      color: var(--yellow); text-transform: uppercase;
+      letter-spacing: 1.5px; margin-bottom: 6px;
+    }
+    .rejoin-card p {
+      font-size: .82rem; color: var(--grey);
+      font-family: var(--mono); line-height: 1.6;
+      margin-bottom: 18px;
+    }
+    .rejoin-meta {
+      display: flex; gap: 8px; margin-bottom: 18px;
+    }
+    .rejoin-meta .meta-tile {
+      flex: 1;
+      background: var(--navy3);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 8px;
+    }
+    .rejoin-meta .meta-label {
+      font-size: .62rem; color: var(--grey);
+      text-transform: uppercase; letter-spacing: 1.5px;
+      font-family: var(--mono); margin-bottom: 4px;
+    }
+    .rejoin-meta .meta-value {
+      font-size: 1rem; font-weight: 800;
+      color: var(--white); font-family: var(--mono);
+    }
   </style>
 </head>
 <body>
@@ -613,6 +647,34 @@
         <button class="btn btn-ghost" onclick="closeEndGameModal()">Cancel</button>
         <button class="btn btn-danger" onclick="confirmEndGame()">End Game</button>
       </div>
+    </div>
+  </div>
+
+  <!-- ══ SCREEN: Rejoin ═══════════════════════════════════════════════════ -->
+  <div id="screen-rejoin" class="screen fade-in">
+    <div class="logo">
+      <h1>Trivia<em class="bolt">⚡</em>Blitz</h1>
+    </div>
+    <div class="card rejoin-card">
+      <div class="rejoin-icon">🔄</div>
+      <h2>Rejoin Game?</h2>
+      <p>Looks like you were in a game.<br>Would you like to jump back in?</p>
+      <div class="rejoin-meta">
+        <div class="meta-tile">
+          <div class="meta-label">Game ID</div>
+          <div class="meta-value" id="rejoin-game-id">—</div>
+        </div>
+        <div class="meta-tile">
+          <div class="meta-label">Your Name</div>
+          <div class="meta-value" id="rejoin-player-name">—</div>
+        </div>
+        <div class="meta-tile">
+          <div class="meta-label">Role</div>
+          <div class="meta-value" id="rejoin-role">—</div>
+        </div>
+      </div>
+      <button class="btn btn-primary" onclick="doRejoin()">↩ Rejoin Game</button>
+      <button class="btn btn-secondary" style="margin-top:10px" onclick="discardSession()">Start Fresh</button>
     </div>
   </div>
 
@@ -814,7 +876,28 @@ const BACKEND = 'https://triviacore.onrender.com';
 const API = (path) => `${BACKEND}${path}`;
 const WS_BASE = () => BACKEND.replace(/^https:\/\//, 'wss://').replace(/^http:\/\//, 'ws://');
 
-// ── Screen management ─────────────────────────────────────────────────────────
+// ── Session persistence (survives refresh, cleared on tab close) ──────────────
+const SESSION_KEY = 'tb_session';
+
+function saveSession() {
+  sessionStorage.setItem(SESSION_KEY, JSON.stringify({
+    gameId:     state.gameId,
+    playerId:   state.playerId,
+    playerName: state.playerName,
+    isHost:     state.isHost,
+  }));
+}
+
+function loadSession() {
+  try {
+    const raw = sessionStorage.getItem(SESSION_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch { return null; }
+}
+
+function clearSession() {
+  sessionStorage.removeItem(SESSION_KEY);
+}
 function showScreen(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   const el = document.getElementById('screen-' + id);
@@ -874,6 +957,7 @@ async function createGame() {
     state.playerName = name;
     state.isHost = true;
     // Button stays disabled — we're navigating away to the lobby
+    saveSession();
     enterLobby();
   } catch {
     showError('host-error', 'Could not reach server.');
@@ -914,6 +998,7 @@ async function joinGame() {
     state.playerName = name;
     state.isHost = false;
     // Button stays disabled — we're navigating away to the lobby
+    saveSession();
     enterLobby();
   } catch {
     showError('join-error', 'Could not reach server.');
@@ -967,7 +1052,26 @@ function enterLobby() {
   }
 }
 
-// ── End Game modal ─────────────────────────────────────────────────────────────
+// ── Rejoin: restore session and reconnect WebSocket ───────────────────────────
+function doRejoin() {
+  // State is already restored from session before this screen shows.
+  // Just re-enter the lobby flow — no REST call needed, player already registered.
+  if (state.isHost) document.body.classList.add('is-host');
+  showScreen('lobby');
+  document.getElementById('lobby-gid').textContent = state.gameId;
+  connectWebSocket();
+  // The connected message will route us to the right screen via handleMessage
+}
+
+function discardSession() {
+  clearSession();
+  // Reset state fully
+  state.gameId = null; state.playerId = null;
+  state.playerName = null; state.isHost = false;
+  state.joinUrl = null;
+  document.body.classList.remove('is-host');
+  showScreen('home');
+}
 function openEndGameModal() {
   document.getElementById('end-game-modal').classList.add('open');
 }
@@ -1057,13 +1161,18 @@ function connectWebSocket() {
   state.ws.onclose = (e) => {
     // Null out so no further sends are attempted on a dead socket
     state.ws = null;
-    // If the game already transitioned to gameover via a WS message
-    // (game_over / game_ended_by_host), the screen is already correct —
-    // lockUI() is a no-op there. If the socket closed unexpectedly
-    // (server cleanup) without a prior message, show a clear end state.
     const onGameover = document.getElementById('screen-gameover').classList.contains('active');
     if (!onGameover) {
-      lockUI('🔌 Session ended — the game is no longer available.');
+      // Close codes 4004 (game not found) and 4001 (player not found) mean the
+      // session is permanently stale — clear it so the rejoin screen doesn't reappear
+      if (e.code === 4004 || e.code === 4001) {
+        clearSession();
+        showScreen('home');
+        // Brief message in the host error box if visible, otherwise just home
+      } else {
+        lockUI('🔌 Session ended — the game is no longer available.');
+        clearSession();
+      }
     }
   };
 
@@ -1075,8 +1184,29 @@ function connectWebSocket() {
 function handleMessage(msg) {
   switch (msg.type) {
     case 'connected':
-      // Populate settings tiles immediately on connect (for joining players)
+      // Populate settings tiles for lobby display
       updateLobbyPlayers(msg.players, msg.total_questions, msg.question_timer);
+      // ── Phase routing: send reconnecting player to correct screen ──
+      switch (msg.phase) {
+        case 'lobby':
+          // Already on lobby screen — nothing extra needed
+          updateLobbyPlayers(msg.players, msg.total_questions, msg.question_timer);
+          break;
+        case 'starting':
+          showScreen('starting');
+          break;
+        case 'question':
+          // Mid-question catch-up message arrives right after this — handled by 'question' case
+          break;
+        case 'leaderboard':
+          // Leaderboard catch-up message arrives right after this — handled by 'leaderboard' case
+          break;
+        case 'ended':
+        case 'cleaned':
+          clearSession();
+          lockUI('This game has already ended.');
+          break;
+      }
       break;
 
     case 'lobby_countdown':
@@ -1120,14 +1250,21 @@ function handleMessage(msg) {
 // ── Question ──────────────────────────────────────────────────────────────────
 function startQuestion(msg) {
   showScreen('question');
-  state.currentAnswer = null;
   state.questionStart = msg.start_time;
   state.questionDuration = msg.timer;
+
+  // On reconnect, preserve already-answered state so player can't answer twice
+  if (!msg.reconnect) {
+    state.currentAnswer = null;
+  }
 
   document.getElementById('q-progress').textContent = `Q ${msg.question_index + 1} / ${msg.total_questions}`;
   document.getElementById('q-category').textContent = msg.category || '';
   document.getElementById('q-text').textContent = msg.text;
-  document.getElementById('answered-status').style.display = 'none';
+
+  const answeredEl = document.getElementById('answered-status');
+  answeredEl.style.display = 'none';
+  answeredEl.textContent = '✓ Answer submitted — waiting for others…';
 
   // Options
   const grid = document.getElementById('options-grid');
@@ -1135,6 +1272,15 @@ function startQuestion(msg) {
   grid.innerHTML = msg.options.map(opt =>
     `<button class="option-btn" onclick="submitAnswer(this, '${esc(opt)}')">${esc(opt)}</button>`
   ).join('');
+
+  // If reconnecting and had already answered, restore disabled state
+  if (msg.reconnect && state.currentAnswer) {
+    document.querySelectorAll('.option-btn').forEach(b => {
+      b.disabled = true;
+      if (b.textContent === state.currentAnswer) b.classList.add('selected');
+    });
+    answeredEl.style.display = 'block';
+  }
 
   // Timer
   if (state.questionTimer) clearInterval(state.questionTimer);
@@ -1217,6 +1363,7 @@ function showLeaderboard(msg) {
 // ── Game Over ─────────────────────────────────────────────────────────────────
 function showGameOver(msg) {
   clearInterval(state.questionTimer);
+  clearSession();              // game is over — no point rejoining
   showScreen('gameover');
 
   // Distinguish natural end from host-forced end
@@ -1261,15 +1408,34 @@ async function copyJoinUrl() {
   }
 }
 
-// ── Auto-fill Game ID if page was opened via QR / shared link ────────────────
-(function autoFillFromUrl() {
+// ── Startup: check for saved session or ?join= URL param ─────────────────────
+(function startup() {
+  // 1. Check for a saved session first (page refresh mid-game)
+  const session = loadSession();
+  if (session && session.gameId && session.playerId) {
+    // Restore state from session
+    state.gameId     = session.gameId;
+    state.playerId   = session.playerId;
+    state.playerName = session.playerName;
+    state.isHost     = session.isHost;
+
+    // Populate and show the rejoin screen
+    document.getElementById('rejoin-game-id').textContent     = session.gameId;
+    document.getElementById('rejoin-player-name').textContent = session.playerName;
+    document.getElementById('rejoin-role').textContent        = session.isHost ? 'Host' : 'Player';
+
+    // Start on rejoin screen instead of home
+    document.getElementById('screen-home').classList.remove('active');
+    document.getElementById('screen-rejoin').classList.add('active');
+    return;
+  }
+
+  // 2. No session — check for ?join=GAMEID in URL (QR code / shared link)
   const params = new URLSearchParams(location.search);
   const gid = params.get('join');
   if (gid) {
-    // Switch to join tab and pre-fill the game ID
     switchTab('join');
     document.getElementById('join-gid').value = gid.toUpperCase();
-    // Focus name field so user can type their name immediately
     document.getElementById('join-name').focus();
   }
 })();
