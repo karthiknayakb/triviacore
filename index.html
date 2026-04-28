@@ -707,6 +707,113 @@
       color: var(--cyan);
       font-family: var(--mono);
     }
+    /* ── Help / How to Play section ────────────────────── */
+    .help-section { margin-top: 4px; }
+    .help-toggle {
+      width: 100%;
+      display: flex; align-items: center; justify-content: space-between;
+      background: transparent;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      padding: 13px 16px;
+      color: var(--grey);
+      font-family: var(--font);
+      font-size: .85rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 1px;
+      cursor: pointer;
+      transition: border-color .2s, color .2s;
+    }
+    .help-toggle:hover { border-color: var(--yellow); color: var(--yellow); }
+    .help-toggle .arrow {
+      font-size: .7rem;
+      transition: transform .25s;
+      display: inline-block;
+    }
+    .help-toggle.open { border-color: var(--yellow); color: var(--yellow); }
+    .help-toggle.open .arrow { transform: rotate(180deg); }
+
+    .help-body {
+      display: none;
+      background: var(--navy2);
+      border: 1.5px solid var(--border);
+      border-top: none;
+      border-radius: 0 0 var(--radius) var(--radius);
+      padding: 0 16px;
+      overflow: hidden;
+    }
+    .help-body.open { display: block; }
+
+    .help-block {
+      padding: 16px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .help-block:last-child { border-bottom: none; }
+    .help-block-title {
+      display: flex; align-items: center; gap: 8px;
+      font-size: .78rem; font-weight: 800;
+      text-transform: uppercase; letter-spacing: 1.5px;
+      color: var(--yellow);
+      margin-bottom: 10px;
+      font-family: var(--mono);
+    }
+    .help-block-title .hicon { font-size: 1rem; }
+    .help-steps { display: flex; flex-direction: column; gap: 8px; }
+    .help-step {
+      display: flex; gap: 10px; align-items: flex-start;
+    }
+    .help-step-num {
+      flex-shrink: 0;
+      width: 22px; height: 22px;
+      border-radius: 50%;
+      background: rgba(245,230,66,.15);
+      border: 1px solid rgba(245,230,66,.3);
+      color: var(--yellow);
+      font-size: .65rem; font-weight: 900;
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--mono);
+      margin-top: 1px;
+    }
+    .help-step-text {
+      font-size: .82rem; color: var(--white);
+      line-height: 1.5;
+    }
+    .help-step-text strong { color: var(--cyan); font-weight: 700; }
+
+    .help-score-box {
+      background: var(--navy3);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 14px;
+      font-family: var(--mono);
+      font-size: .78rem;
+      line-height: 1.8;
+    }
+    .help-score-box .score-line { display: flex; justify-content: space-between; }
+    .help-score-box .score-label { color: var(--grey); }
+    .help-score-box .score-val { font-weight: 700; }
+    .help-score-box .score-val.good { color: var(--green); }
+    .help-score-box .score-val.bad  { color: var(--red); }
+    .help-score-box .score-val.hint { color: var(--yellow); }
+
+    .help-example {
+      margin-top: 10px;
+      font-size: .75rem;
+      color: var(--grey);
+      font-family: var(--mono);
+      line-height: 1.6;
+      background: rgba(60,240,214,.05);
+      border: 1px solid rgba(60,240,214,.15);
+      border-radius: 6px;
+      padding: 8px 12px;
+    }
+    .help-example em { color: var(--cyan); font-style: normal; }
+
+    .help-tips { display: flex; flex-direction: column; gap: 6px; }
+    .help-tip {
+      display: flex; gap: 8px; align-items: flex-start;
+      font-size: .8rem; color: var(--white); line-height: 1.4;
+    }
+    .help-tip .tip-icon { flex-shrink: 0; font-size: .9rem; margin-top: 1px; }
   </style>
 </head>
 <body>
@@ -816,9 +923,96 @@
         </p>
       </div>
     </div>
-  </div>
 
-  <!-- ══ SCREEN: Lobby ════════════════════════════════════════════════════ -->
+    <!-- ── How to Play ──────────────────────────────────── -->
+    <div class="help-section">
+      <button class="help-toggle" onclick="toggleHelp()" id="help-toggle">
+        <span>❓ How to Play</span>
+        <span class="arrow">▼</span>
+      </button>
+      <div class="help-body" id="help-body">
+
+        <!-- Starting a Game -->
+        <div class="help-block">
+          <div class="help-block-title"><span class="hicon">🎮</span>Starting a Game</div>
+          <div class="help-steps">
+            <div class="help-step">
+              <div class="help-step-num">1</div>
+              <div class="help-step-text">The <strong>host</strong> opens the Host Game tab, enters their name, picks a question count, timer, and categories, then clicks <strong>Create Game</strong>.</div>
+            </div>
+            <div class="help-step">
+              <div class="help-step-num">2</div>
+              <div class="help-step-text">A unique <strong>Game ID</strong> and <strong>QR code</strong> appear in the lobby. Share either with your friends.</div>
+            </div>
+            <div class="help-step">
+              <div class="help-step-num">3</div>
+              <div class="help-step-text"><strong>Players</strong> open the Join Game tab, enter the Game ID and a display name, then click <strong>Join Game</strong>.</div>
+            </div>
+            <div class="help-step">
+              <div class="help-step-num">4</div>
+              <div class="help-step-text">The lobby stays open for <strong>25 seconds</strong>. After that it locks automatically and the game begins — no late joins allowed.</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Answering Questions -->
+        <div class="help-block">
+          <div class="help-block-title"><span class="hicon">❓</span>Answering Questions</div>
+          <div class="help-steps">
+            <div class="help-step">
+              <div class="help-step-num">1</div>
+              <div class="help-step-text">Everyone receives the <strong>same question at the same time</strong>. Questions are either multiple choice (4 options) or True / False.</div>
+            </div>
+            <div class="help-step">
+              <div class="help-step-num">2</div>
+              <div class="help-step-text">Tap your answer before the <strong>countdown timer</strong> reaches zero. Once submitted your answer is locked — no changes allowed.</div>
+            </div>
+            <div class="help-step">
+              <div class="help-step-num">3</div>
+              <div class="help-step-text">After the timer ends, the <strong>correct answer</strong> is revealed and the leaderboard updates for 6 seconds before the next question.</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Scoring -->
+        <div class="help-block">
+          <div class="help-block-title"><span class="hicon">🏆</span>Scoring</div>
+          <div class="help-score-box">
+            <div class="score-line">
+              <span class="score-label">Correct answer</span>
+              <span class="score-val good">+1.0 pt</span>
+            </div>
+            <div class="score-line">
+              <span class="score-label">Speed bonus</span>
+              <span class="score-val hint">+0.05 × seconds left</span>
+            </div>
+            <div class="score-line">
+              <span class="score-label">Wrong or no answer</span>
+              <span class="score-val bad">0 pts</span>
+            </div>
+          </div>
+          <div class="help-example">
+            <strong>Example:</strong> 35s timer — you answer correctly with <em>20s remaining</em><br>
+            Score = 1.0 + (0.05 × 20) = <em>2.0 points</em>
+          </div>
+        </div>
+
+        <!-- Tips -->
+        <div class="help-block">
+          <div class="help-block-title"><span class="hicon">💡</span>Tips</div>
+          <div class="help-tips">
+            <div class="help-tip"><span class="tip-icon">⚡</span>Answer fast — the speed bonus can be worth more than the base point.</div>
+            <div class="help-tip"><span class="tip-icon">📱</span>Scan the QR code in the lobby to share the game instantly — no typing needed.</div>
+            <div class="help-tip"><span class="tip-icon">🔄</span>Accidentally refresh? A <strong>Rejoin</strong> prompt will appear to get you back into the game.</div>
+            <div class="help-tip"><span class="tip-icon">🛑</span>The host can end the game at any time from the End Game button — final scores are shown immediately.</div>
+            <div class="help-tip"><span class="tip-icon">🏷️</span>Equal scores share the same rank — ties are shown fairly on the leaderboard.</div>
+          </div>
+        </div>
+
+      </div><!-- /help-body -->
+    </div><!-- /help-section -->
+
+  </div><!-- /screen-home -->
   <div id="screen-lobby" class="screen fade-in">
     <div class="logo">
       <h1>Trivia<em class="bolt">⚡</em>Blitz</h1>
@@ -1076,6 +1270,15 @@ function showError(boxId, msg) {
   el.textContent = msg;
   el.classList.add('visible');
   setTimeout(() => el.classList.remove('visible'), 4000);
+}
+
+// ── Help section toggle ───────────────────────────────────────────────────────
+function toggleHelp() {
+  const toggle = document.getElementById('help-toggle');
+  const body   = document.getElementById('help-body');
+  const isOpen = body.classList.contains('open');
+  toggle.classList.toggle('open', !isOpen);
+  body.classList.toggle('open', !isOpen);
 }
 
 // ── Create game ───────────────────────────────────────────────────────────────
