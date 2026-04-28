@@ -42,7 +42,8 @@ QUESTION_TIMER_SECONDS = int(os.getenv("JOIN_WINDOW_SECONDS",35))
 LEADERBOARD_DISPLAY_SECONDS = int(os.getenv("LEADERBOARD_DISPLAY_SECONDS",6))
 SPEED_BONUS_MULTIPLIER = float(os.getenv("SPEED_BONUS_MULTIPLIER",0.05))
 MAX_CONCURRENT_GAMES = int(os.getenv("MAX_CONCURRENT_GAMES",5))          # hard cap on simultaneous active games
-MAX_PLAYERS_PER_GAME = int(os.getenv("MAX_PLAYERS_PER_GAME",100))          # hard cap on players per game
+MAX_PLAYERS_PER_GAME = int(os.getenv("MAX_PLAYERS_PER_GAME",100))        # hard cap on players per game
+ALL_ANSWERED_WAIT_SECONDS = int(os.getenv("ALL_ANSWERED_WAIT_SECONDS",100))   # pause after all players answer early
 
 # ── Game state ────────────────────────────────────────────────────────────────
 # game_id -> GameState
@@ -202,8 +203,38 @@ async def run_game(game: GameState):
             "start_time": game.question_start_time,
         })
 
-        # Wait for timer
-        await asyncio.sleep(game.question_timer)
+        # ── Wait for timer OR all active players to answer ────────────
+        q_start = time.time()
+        early_exit = False
+        while True:
+            await asyncio.sleep(0.5)
+            # Bail out immediately if game was ended by host
+            if game.phase == "ended":
+                return
+            elapsed = time.time() - q_start
+            # Only count players who are currently connected
+            active_pids = set(game.connections.keys())
+            all_answered = (
+                len(active_pids) > 0
+                and all(
+                    game.players[pid].answered_current
+                    for pid in active_pids
+                    if pid in game.players
+                )
+            )
+            if all_answered:
+                early_exit = True
+                break
+            if elapsed >= game.question_timer:
+                break
+
+        # If everyone answered early, notify clients and pause briefly
+        if early_exit:
+            await broadcast(game, {
+                "type": "all_answered",
+                "wait_seconds": ALL_ANSWERED_WAIT_SECONDS,
+            })
+            await asyncio.sleep(ALL_ANSWERED_WAIT_SECONDS)
 
         # Reveal answer & compute scores
         async with game.lock:
