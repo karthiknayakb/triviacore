@@ -60,7 +60,7 @@ class PlayerState:
 
 
 class GameState:
-    def __init__(self, game_id: str, host_id: str, total_questions: int = 10, question_timer: int = 35):
+    def __init__(self, game_id: str, host_id: str, total_questions: int = 10, question_timer: int = 35, selected_categories: Optional[List[str]] = None):
         self.game_id = game_id
         self.host_id = host_id
         self.phase = "lobby"          # lobby | question | leaderboard | ended
@@ -75,6 +75,7 @@ class GameState:
         # ── Configurable per game ──────────────────────────
         self.total_questions: int = total_questions
         self.question_timer: int = question_timer
+        self.selected_categories: List[str] = selected_categories or []  # empty = all
 
     def current_question(self) -> Optional[dict]:
         if 0 <= self.current_question_index < len(self.questions):
@@ -259,6 +260,7 @@ async def run_lobby_countdown(game: GameState):
                         for p in game.players.values()],
             "total_questions": game.total_questions,
             "question_timer": game.question_timer,
+            "selected_categories": game.selected_categories,
         })
         if remaining <= 0:
             break
@@ -267,9 +269,14 @@ async def run_lobby_countdown(game: GameState):
     # Lock lobby and start
     async with game.lock:
         game.phase = "starting"
-        # Pick random subset of questions using host-configured count
-        sample_size = min(game.total_questions, len(ALL_QUESTIONS))
-        game.questions = random.sample(ALL_QUESTIONS, sample_size)
+        # Filter by selected categories (empty = all categories)
+        pool = (
+            [q for q in ALL_QUESTIONS if q["category"] in game.selected_categories]
+            if game.selected_categories
+            else ALL_QUESTIONS
+        )
+        sample_size = min(game.total_questions, len(pool))
+        game.questions = random.sample(pool, sample_size)
 
     await broadcast(game, {
         "type": "game_starting",
@@ -282,10 +289,20 @@ async def run_lobby_countdown(game: GameState):
 
 
 # ── REST endpoints ────────────────────────────────────────────────────────────
+
+# Pre-compute available categories for fast lookups
+ALL_CATEGORIES: List[str] = sorted({q["category"] for q in ALL_QUESTIONS})
+CATEGORY_COUNTS: Dict[str, int] = {
+    cat: sum(1 for q in ALL_QUESTIONS if q["category"] == cat)
+    for cat in ALL_CATEGORIES
+}
+
+
 class CreateGameRequest(BaseModel):
     host_name: str
-    num_questions: int = 10   # allowed: 1–50
-    question_time: int = 35   # allowed: 15–120
+    num_questions: int = 10       # allowed: 1–50
+    question_time: int = 35       # allowed: 15–120
+    categories: List[str] = []    # empty = all categories
 
 
 class CreateGameResponse(BaseModel):
@@ -309,11 +326,30 @@ async def create_game(req: CreateGameRequest):
         raise HTTPException(status_code=400, detail="num_questions must be between 1 and 50")
     if not (15 <= req.question_time <= 120):
         raise HTTPException(status_code=400, detail="question_time must be between 15 and 120 seconds")
-    if req.num_questions > len(ALL_QUESTIONS):
-        raise HTTPException(
-            status_code=400,
-            detail=f"num_questions exceeds available questions ({len(ALL_QUESTIONS)})"
-        )
+
+    # ── Validate and normalise categories ──────────────────
+    selected = []
+    if req.categories:
+        valid = set(ALL_CATEGORIES)
+        for cat in req.categories:
+            if cat not in valid:
+                raise HTTPException(status_code=400, detail=f"Unknown category: '{cat}'")
+            selected.append(cat)
+        # Check enough questions exist for the filtered pool
+        pool_size = sum(CATEGORY_COUNTS[c] for c in selected)
+        if req.num_questions > pool_size:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Only {pool_size} question(s) available for the selected categories (requested {req.num_questions})"
+            )
+    else:
+        # No filter — use full bank
+        if req.num_questions > len(ALL_QUESTIONS):
+            raise HTTPException(
+                status_code=400,
+                detail=f"num_questions exceeds available questions ({len(ALL_QUESTIONS)})"
+            )
+
     game_id = generate_game_id()
     host_id = "host_" + "".join(random.choices(string.ascii_lowercase + string.digits, k=8))
     game = GameState(
@@ -321,6 +357,7 @@ async def create_game(req: CreateGameRequest):
         host_id=host_id,
         total_questions=req.num_questions,
         question_timer=req.question_time,
+        selected_categories=selected,
     )
     # Add host as a player
     game.players[host_id] = PlayerState(host_id, req.host_name.strip())
@@ -388,6 +425,7 @@ async def websocket_endpoint(websocket: WebSocket, game_id: str, player_id: str)
                     for p in game.players.values()],
         "total_questions": game.total_questions,
         "question_timer": game.question_timer,
+        "selected_categories": game.selected_categories,
     })
 
     # ── Reconnect catch-up: push current game state to this socket ────────
@@ -496,6 +534,15 @@ async def websocket_endpoint(websocket: WebSocket, game_id: str, player_id: str)
 
 
 # ── Root ──────────────────────────────────────────────────────────────────────
+@app.get("/api/categories")
+async def get_categories():
+    """Return all available categories with their question counts."""
+    return [
+        {"name": cat, "count": CATEGORY_COUNTS[cat]}
+        for cat in ALL_CATEGORIES
+    ]
+
+
 @app.get("/")
 async def root():
     return {"message": "TriviaBlitz API is running"}
