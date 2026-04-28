@@ -384,6 +384,38 @@ async def websocket_endpoint(websocket: WebSocket, game_id: str, player_id: str)
         "question_timer": game.question_timer,
     })
 
+    # ── Reconnect catch-up: push current game state to this socket ────────
+    if game.phase == "question":
+        q = game.current_question()
+        if q:
+            elapsed = time.time() - game.question_start_time
+            remaining = max(0, game.question_timer - elapsed)
+            # Reconstruct start_time so the client timer aligns correctly
+            await send_to(websocket, {
+                "type": "question",
+                "question_index": game.current_question_index,
+                "total_questions": len(game.questions),
+                "question_id": q["id"],
+                "text": q["text"],
+                "options": q["options"],
+                "question_type": q["type"],
+                "category": q["category"],
+                "timer": game.question_timer,
+                "start_time": game.question_start_time,
+                "reconnect": True,          # client uses this to restore answered state
+            })
+    elif game.phase == "leaderboard":
+        q = game.current_question()
+        if q:
+            await send_to(websocket, {
+                "type": "leaderboard",
+                "correct_answer": q["correct"],
+                "leaderboard": game.leaderboard(),
+                "question_index": game.current_question_index,
+                "total_questions": len(game.questions),
+                "reconnect": True,
+            })
+
     # Host connects → start lobby countdown task
     if is_host and game.game_task is None:
         game.game_task = asyncio.create_task(run_lobby_countdown(game))
