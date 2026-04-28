@@ -1761,6 +1761,8 @@ function startQuestion(msg) {
   timerNumEl.style.color = '';
   timerNumEl.classList.remove('urgent');
   document.getElementById('q-timer-bar').style.transition = '';
+
+  document.getElementById('q-progress').textContent = `Q ${msg.question_index + 1} / ${msg.total_questions}`;
   document.getElementById('q-category').textContent = msg.category || '';
   document.getElementById('q-text').textContent = msg.text;
 
