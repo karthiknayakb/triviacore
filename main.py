@@ -41,7 +41,8 @@ JOIN_WINDOW_SECONDS = 60
 QUESTION_TIMER_SECONDS = 35
 LEADERBOARD_DISPLAY_SECONDS = 6
 SPEED_BONUS_MULTIPLIER = 0.05
-MAX_CONCURRENT_GAMES = 100          # hard cap on simultaneous active games
+MAX_CONCURRENT_GAMES = 5          # hard cap on simultaneous active games
+MAX_PLAYERS_PER_GAME = 100          # hard cap on players per game
 
 # ── Game state ────────────────────────────────────────────────────────────────
 # game_id -> GameState
@@ -344,6 +345,8 @@ async def join_game(req: JoinGameRequest):
         raise HTTPException(status_code=400, detail="Game already started or ended")
     if not req.player_name.strip():
         raise HTTPException(status_code=400, detail="Player name required")
+    if len(game.players) >= MAX_PLAYERS_PER_GAME:
+        raise HTTPException(status_code=400, detail=f"Game is full ({MAX_PLAYERS_PER_GAME} players max)")
     # Check name uniqueness
     taken = {p.name.lower() for p in game.players.values()}
     if req.player_name.strip().lower() in taken:
