@@ -641,6 +641,72 @@
       font-size: 1rem; font-weight: 800;
       color: var(--white); font-family: var(--mono);
     }
+    /* ── Category selector (host tab) ─────────────────── */
+    .cat-section { margin-bottom: 14px; }
+    .cat-section-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 8px;
+    }
+    .cat-section-header label {
+      font-size: .75rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 1.5px;
+      color: var(--grey);
+    }
+    .cat-toggle-all {
+      font-size: .7rem; font-weight: 700;
+      color: var(--cyan); background: none; border: none;
+      cursor: pointer; font-family: var(--mono);
+      text-transform: uppercase; letter-spacing: 1px;
+      padding: 0;
+    }
+    .cat-toggle-all:hover { text-decoration: underline; }
+    .cat-chips {
+      display: flex; flex-wrap: wrap; gap: 7px;
+      min-height: 36px;
+    }
+    .cat-chip {
+      display: inline-flex; align-items: center;
+      padding: 5px 11px;
+      border-radius: 20px;
+      border: 1.5px solid var(--border);
+      background: var(--navy3);
+      color: var(--grey);
+      font-size: .75rem; font-weight: 700;
+      font-family: var(--font);
+      cursor: pointer;
+      transition: border-color .15s, background .15s, color .15s;
+      user-select: none;
+    }
+    .cat-chip:hover { border-color: var(--cyan); color: var(--white); }
+    .cat-chip.selected {
+      border-color: var(--cyan);
+      background: rgba(60,240,214,.12);
+      color: var(--cyan);
+    }
+    .cat-chip .cat-count {
+      margin-left: 5px;
+      font-size: .65rem;
+      color: inherit; opacity: .7;
+      font-family: var(--mono);
+    }
+    .cat-loading {
+      font-size: .75rem; color: var(--grey);
+      font-family: var(--mono);
+    }
+
+    /* ── Category chips in lobby ───────────────────────── */
+    .lobby-cats {
+      display: flex; flex-wrap: wrap; gap: 5px;
+      margin-bottom: 14px;
+    }
+    .lobby-cat-chip {
+      font-size: .68rem; font-weight: 700;
+      padding: 3px 9px; border-radius: 12px;
+      background: rgba(60,240,214,.1);
+      border: 1px solid rgba(60,240,214,.25);
+      color: var(--cyan);
+      font-family: var(--mono);
+    }
   </style>
 </head>
 <body>
@@ -733,6 +799,16 @@
           </div>
         </div>
         <div style="height:14px"></div>
+        <!-- Category selector -->
+        <div class="cat-section">
+          <div class="cat-section-header">
+            <label>Categories <span style="font-weight:400;text-transform:none;letter-spacing:0">(all selected)</span></label>
+            <button class="cat-toggle-all" onclick="toggleAllCategories()">Clear All</button>
+          </div>
+          <div class="cat-chips" id="cat-chips">
+            <span class="cat-loading">Loading categories…</span>
+          </div>
+        </div>
         <button class="btn btn-primary" onclick="createGame()">Create Game →</button>
         <div class="divider">or</div>
         <p style="font-size:.8rem;color:var(--grey);text-align:center;line-height:1.5">
@@ -779,6 +855,8 @@
           <div id="lobby-question-timer" style="font-size:1.3rem;font-weight:900;color:var(--cyan);font-family:var(--mono)">—</div>
         </div>
       </div>
+      <!-- Categories display -->
+      <div class="lobby-cats" id="lobby-cats" style="display:none"></div>
       <div class="countdown-ring">
         <div class="ring-wrap">
           <svg viewBox="0 0 88 88" width="88" height="88">
@@ -907,6 +985,70 @@ function loadSession() {
 function clearSession() {
   sessionStorage.removeItem(SESSION_KEY);
 }
+
+// ── Category state & helpers ──────────────────────────────────────────────────
+let availableCategories = [];   // [{name, count}, …] fetched from server
+let selectedCategories  = [];   // names currently toggled on (empty = all)
+
+async function fetchCategories() {
+  try {
+    const res = await fetch(API('/api/categories'));
+    if (!res.ok) throw new Error();
+    availableCategories = await res.json();
+    // Default: all selected
+    selectedCategories = availableCategories.map(c => c.name);
+    renderCategoryChips();
+  } catch {
+    document.getElementById('cat-chips').innerHTML =
+      '<span class="cat-loading" style="color:var(--red)">Could not load categories</span>';
+  }
+}
+
+function renderCategoryChips() {
+  const container = document.getElementById('cat-chips');
+  if (!container) return;
+  container.innerHTML = availableCategories.map(c => {
+    const on = selectedCategories.includes(c.name);
+    return `<button class="cat-chip ${on ? 'selected' : ''}"
+              onclick="toggleCategory('${esc(c.name)}')">${esc(c.name)}
+              <span class="cat-count">${c.count}</span></button>`;
+  }).join('');
+  // Update header label
+  const header = document.querySelector('.cat-section-header label span');
+  if (header) {
+    const all = selectedCategories.length === availableCategories.length;
+    header.textContent = all ? '(all selected)' : `(${selectedCategories.length} selected)`;
+  }
+  // Update toggle-all button
+  const btn = document.querySelector('.cat-toggle-all');
+  if (btn) {
+    const all = selectedCategories.length === availableCategories.length;
+    btn.textContent = all ? 'Clear All' : 'Select All';
+  }
+}
+
+function toggleCategory(name) {
+  const idx = selectedCategories.indexOf(name);
+  if (idx === -1) {
+    selectedCategories.push(name);
+  } else {
+    // Prevent deselecting the last category
+    if (selectedCategories.length === 1) return;
+    selectedCategories.splice(idx, 1);
+  }
+  renderCategoryChips();
+}
+
+function toggleAllCategories() {
+  const all = selectedCategories.length === availableCategories.length;
+  if (all) {
+    // Clear all — keep at least first one to avoid empty selection
+    selectedCategories = availableCategories.length ? [availableCategories[0].name] : [];
+  } else {
+    selectedCategories = availableCategories.map(c => c.name);
+  }
+  renderCategoryChips();
+}
 function showScreen(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   const el = document.getElementById('screen-' + id);
@@ -923,6 +1065,10 @@ function switchTab(tab) {
   });
   document.getElementById('tab-join').style.display = tab === 'join' ? '' : 'none';
   document.getElementById('tab-host').style.display = tab === 'host' ? '' : 'none';
+  // Fetch categories the first time the host tab is opened
+  if (tab === 'host' && availableCategories.length === 0) {
+    fetchCategories();
+  }
 }
 
 function showError(boxId, msg) {
@@ -941,22 +1087,40 @@ async function createGame() {
   if (!name)                                        return showError('host-error', 'Please enter your name.');
   if (isNaN(numQ)  || numQ  < 1   || numQ  > 50)   return showError('host-error', 'Number of questions must be between 1 and 50.');
   if (isNaN(qTime) || qTime < 15  || qTime > 120)  return showError('host-error', 'Time per question must be between 15 and 120 seconds.');
+  if (selectedCategories.length === 0)              return showError('host-error', 'Select at least one category.');
+
+  // Client-side pool size check to give instant feedback before hitting the server
+  const poolSize = availableCategories
+    .filter(c => selectedCategories.includes(c.name))
+    .reduce((sum, c) => sum + c.count, 0);
+  if (numQ > poolSize) {
+    return showError('host-error', `Only ${poolSize} question(s) available for the selected categories.`);
+  }
 
   const btn = document.querySelector('#tab-host .btn-primary');
-  if (btn.disabled) return;                         // already in-flight — ignore extra clicks
+  if (btn.disabled) return;
   btn.disabled = true;
   btn.textContent = 'Creating…';
+
+  // Send selected categories only if it's a subset (all selected = no filter needed)
+  const allSelected = selectedCategories.length === availableCategories.length;
+  const categoriesToSend = allSelected ? [] : selectedCategories;
 
   try {
     const res = await fetch(API('/api/game/create'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ host_name: name, num_questions: numQ, question_time: qTime }),
+      body: JSON.stringify({
+        host_name: name,
+        num_questions: numQ,
+        question_time: qTime,
+        categories: categoriesToSend,
+      }),
     });
     if (!res.ok) {
       const d = await res.json();
       showError('host-error', d.detail || 'Error');
-      btn.disabled = false;                         // re-enable so user can correct and retry
+      btn.disabled = false;
       btn.textContent = 'Create Game →';
       return;
     }
@@ -965,12 +1129,11 @@ async function createGame() {
     state.playerId = data.host_id;
     state.playerName = name;
     state.isHost = true;
-    // Button stays disabled — we're navigating away to the lobby
     saveSession();
     enterLobby();
   } catch {
     showError('host-error', 'Could not reach server.');
-    btn.disabled = false;                           // re-enable on network failure
+    btn.disabled = false;
     btn.textContent = 'Create Game →';
   }
 }
@@ -1123,7 +1286,7 @@ function lockUI(message) {
   }
 }
 
-function updateLobbyPlayers(players, totalQuestions, questionTimer) {
+function updateLobbyPlayers(players, totalQuestions, questionTimer, categories) {
   const list = document.getElementById('players-list');
   document.getElementById('lobby-count').textContent = players.length;
   list.innerHTML = players.map(p => {
@@ -1140,6 +1303,18 @@ function updateLobbyPlayers(players, totalQuestions, questionTimer) {
     document.getElementById('lobby-num-questions').textContent = totalQuestions;
   if (questionTimer !== undefined)
     document.getElementById('lobby-question-timer').textContent = questionTimer + 's';
+  // Update category chips
+  const catEl = document.getElementById('lobby-cats');
+  if (catEl && categories !== undefined) {
+    if (categories && categories.length > 0) {
+      catEl.style.display = 'flex';
+      catEl.innerHTML = categories.map(c =>
+        `<span class="lobby-cat-chip">${esc(c)}</span>`
+      ).join('');
+    } else {
+      catEl.style.display = 'none';
+    }
+  }
 }
 
 function updateLobbyCountdown(seconds) {
@@ -1194,12 +1369,12 @@ function handleMessage(msg) {
   switch (msg.type) {
     case 'connected':
       // Populate settings tiles for lobby display
-      updateLobbyPlayers(msg.players, msg.total_questions, msg.question_timer);
+      updateLobbyPlayers(msg.players, msg.total_questions, msg.question_timer, msg.selected_categories);
       // ── Phase routing: send reconnecting player to correct screen ──
       switch (msg.phase) {
         case 'lobby':
           // Already on lobby screen — nothing extra needed
-          updateLobbyPlayers(msg.players, msg.total_questions, msg.question_timer);
+          updateLobbyPlayers(msg.players, msg.total_questions, msg.question_timer, msg.selected_categories);
           break;
         case 'starting':
           showScreen('starting');
@@ -1220,7 +1395,7 @@ function handleMessage(msg) {
 
     case 'lobby_countdown':
       updateLobbyCountdown(msg.seconds_remaining);
-      updateLobbyPlayers(msg.players, msg.total_questions, msg.question_timer);
+      updateLobbyPlayers(msg.players, msg.total_questions, msg.question_timer, msg.selected_categories);
       break;
 
     case 'game_starting':
