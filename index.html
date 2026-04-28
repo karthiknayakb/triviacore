@@ -455,9 +455,18 @@
     .lb-rank.silver { color: #c0c8d8; }
     .lb-rank.bronze { color: #d4a574; }
     .lb-name { flex: 1; font-weight: 700; font-size: .95rem; }
+    .lb-meta {
+      display: flex; flex-direction: column;
+      align-items: flex-end; gap: 2px;
+    }
     .lb-score {
       font-family: var(--mono); font-size: .95rem; font-weight: 700;
       color: var(--cyan);
+    }
+    .lb-correct-count {
+      font-family: var(--mono); font-size: .68rem;
+      color: var(--grey);
+      white-space: nowrap;
     }
 
     .next-hint {
@@ -1333,6 +1342,23 @@ function disableOptions() {
   }
 }
 
+// ── Shared leaderboard row renderer ──────────────────────────────────────────
+function renderLeaderboardRows(leaderboard, totalQuestions, animDelay = 0.06) {
+  return leaderboard.map((p, i) => {
+    const rankClass  = p.rank === 1 ? 'gold' : p.rank === 2 ? 'silver' : p.rank === 3 ? 'bronze' : '';
+    const rankLabel  = p.rank === 1 ? '🥇' : p.rank === 2 ? '🥈' : p.rank === 3 ? '🥉' : `#${p.rank}`;
+    const isMe       = p.player_id === state.playerId;
+    const correctStr = totalQuestions
+      ? `<span class="lb-correct-count">${p.correct_answers ?? 0}/${totalQuestions}</span>`
+      : '';
+    return `<div class="lb-row ${isMe ? 'me' : ''} ${p.rank === 1 ? 'rank1' : ''}" style="animation-delay:${i * animDelay}s">
+      <div class="lb-rank ${rankClass}">${rankLabel}</div>
+      <div class="lb-name">${esc(p.name)}${isMe ? ' <span style="color:var(--cyan);font-size:.7rem">(you)</span>' : ''}</div>
+      <div class="lb-meta">${correctStr}<div class="lb-score">${p.score.toFixed(2)}</div></div>
+    </div>`;
+  }).join('');
+}
+
 // ── Leaderboard ───────────────────────────────────────────────────────────────
 function showLeaderboard(msg) {
   clearInterval(state.questionTimer);
@@ -1345,19 +1371,8 @@ function showLeaderboard(msg) {
     ? 'Final leaderboard incoming…'
     : `Next question in ${6} seconds…`;
 
-  // Highlight correct/incorrect on option buttons before switching (already switched)
-  // Build leaderboard
-  const list = document.getElementById('lb-list');
-  list.innerHTML = msg.leaderboard.map((p, i) => {
-    const rankClass = p.rank === 1 ? 'gold' : p.rank === 2 ? 'silver' : p.rank === 3 ? 'bronze' : '';
-    const rankLabel = p.rank === 1 ? '🥇' : p.rank === 2 ? '🥈' : p.rank === 3 ? '🥉' : `#${p.rank}`;
-    const isMe = p.player_id === state.playerId;
-    return `<div class="lb-row ${isMe ? 'me' : ''} ${p.rank === 1 ? 'rank1' : ''}" style="animation-delay:${i*0.06}s">
-      <div class="lb-rank ${rankClass}">${rankLabel}</div>
-      <div class="lb-name">${esc(p.name)}${isMe ? ' <span style="color:var(--cyan);font-size:.7rem">(you)</span>' : ''}</div>
-      <div class="lb-score">${p.score.toFixed(2)}</div>
-    </div>`;
-  }).join('');
+  document.getElementById('lb-list').innerHTML =
+    renderLeaderboardRows(msg.leaderboard, msg.total_questions, 0.06);
 }
 
 // ── Game Over ─────────────────────────────────────────────────────────────────
@@ -1374,19 +1389,11 @@ function showGameOver(msg) {
   document.getElementById('winner-box').innerHTML = winner ? `
     <div class="crown">👑</div>
     <div class="winner-name">${esc(winner.name)}</div>
-    <div class="winner-score">${winner.score.toFixed(2)} points</div>
+    <div class="winner-score">${winner.score.toFixed(2)} points · ${winner.correct_answers ?? 0}/${msg.total_questions ?? '?'} correct</div>
   ` : '';
 
-  const list = document.getElementById('final-lb-list');
-  list.innerHTML = msg.leaderboard.map((p, i) => {
-    const rankLabel = p.rank === 1 ? '🥇' : p.rank === 2 ? '🥈' : p.rank === 3 ? '🥉' : `#${p.rank}`;
-    const isMe = p.player_id === state.playerId;
-    return `<div class="lb-row ${isMe ? 'me' : ''} ${p.rank === 1 ? 'rank1' : ''}" style="animation-delay:${i*0.07}s">
-      <div class="lb-rank">${rankLabel}</div>
-      <div class="lb-name">${esc(p.name)}${isMe ? ' <span style="color:var(--cyan);font-size:.7rem">(you)</span>' : ''}</div>
-      <div class="lb-score">${p.score.toFixed(2)}</div>
-    </div>`;
-  }).join('');
+  document.getElementById('final-lb-list').innerHTML =
+    renderLeaderboardRows(msg.leaderboard, msg.total_questions, 0.07);
 }
 
 // ── Copy join URL to clipboard ────────────────────────────────────────────────
