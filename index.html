@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>TriviaBlitz ⚡</title>
+  <title>QuizKombat ⚡</title>
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0OCA0OCI+CiAgPHJlY3Qgd2lkdGg9IjQ4IiBoZWlnaHQ9IjQ4IiByeD0iMTAiIGZpbGw9IiNmNWU2NDIiLz4KICA8cG9seWdvbiBwb2ludHM9IjMwLDQgMTQsMjYgMjIsMjYgMTgsNDQgMzQsMjIgMjYsMjIiIGZpbGw9IiMwOTBlMWEiLz4KPC9zdmc+" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -872,7 +872,7 @@
 
 <!-- ══ SERVER HEALTH LOADING SCREEN ════════════════════════════════════════ -->
 <div id="server-loading">
-  <div class="loading-logo">Trivia⚡Blitz</div>
+  <div class="loading-logo">Quiz⚡Kombat</div>
   <div class="loading-spinner"></div>
   <div class="loading-status" id="loading-status">Connecting to server…</div>
   <button class="loading-retry" id="loading-retry" onclick="checkHealth()">Retry</button>
@@ -896,7 +896,7 @@
   <!-- ══ SCREEN: Rejoin ═══════════════════════════════════════════════════ -->
   <div id="screen-rejoin" class="screen fade-in">
     <div class="logo">
-      <h1>Trivia<em class="bolt">⚡</em>Blitz</h1>
+      <h1>Quiz<em class="bolt">⚡</em>Kombat</h1>
     </div>
     <div class="card rejoin-card">
       <div class="rejoin-icon">🔄</div>
@@ -924,7 +924,7 @@
   <!-- ══ SCREEN: Home ══════════════════════════════════════════════════════ -->
   <div id="screen-home" class="screen active fade-in">
     <div class="logo">
-      <h1>Trivia<em class="bolt">⚡</em>Blitz</h1>
+      <h1>Quiz<em class="bolt">⚡</em>Kombat</h1>
       <p>Real-time multiplayer trivia</p>
     </div>
 
@@ -1076,7 +1076,7 @@
   </div><!-- /screen-home -->
   <div id="screen-lobby" class="screen fade-in">
     <div class="logo">
-      <h1>Trivia<em class="bolt">⚡</em>Blitz</h1>
+      <h1>Quiz<em class="bolt">⚡</em>Kombat</h1>
     </div>
     <div class="card">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
@@ -1219,7 +1219,7 @@ const API = (path) => `${BACKEND}${path}`;
 const WS_BASE = () => BACKEND.replace(/^https:\/\//, 'wss://').replace(/^http:\/\//, 'ws://');
 
 // ── Session persistence (survives refresh, cleared on tab close) ──────────────
-const SESSION_KEY = 'tb_session';
+const SESSION_KEY = 'qk_session';
 
 function saveSession() {
   sessionStorage.setItem(SESSION_KEY, JSON.stringify({
