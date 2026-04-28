@@ -7,6 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@400;600;800;900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <style>
     /* ── Variables ─────────────────────────────────────── */
     :root {
@@ -246,7 +247,53 @@
     }
     .ring-label { font-size: .7rem; color: var(--grey); text-transform: uppercase; letter-spacing: 1.5px; margin-top: 6px; }
 
-    .players-list { display: flex; flex-direction: column; gap: 8px; }
+    /* ── QR / Join URL block (host-only in lobby) ──────── */
+    .join-url-block {
+      display: none;                     /* shown only for host via JS */
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      background: var(--navy3);
+      border: 1.5px dashed rgba(60,240,214,.35);
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 14px;
+    }
+    .join-url-block.visible { display: flex; }
+    .join-url-label {
+      font-size: .68rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 2px;
+      color: var(--cyan); font-family: var(--mono);
+    }
+    .qr-wrap {
+      background: #fff;
+      border-radius: 10px;
+      padding: 10px;
+      line-height: 0;                    /* removes gap below canvas */
+    }
+    .join-url-text {
+      font-family: var(--mono);
+      font-size: .72rem;
+      color: var(--grey);
+      word-break: break-all;
+      text-align: center;
+      line-height: 1.5;
+    }
+    .join-url-text span { color: var(--yellow); font-weight: 700; }
+    .copy-btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: transparent;
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      color: var(--grey);
+      font-family: var(--font);
+      font-size: .78rem; font-weight: 700;
+      padding: 7px 14px;
+      cursor: pointer;
+      transition: border-color .15s, color .15s;
+    }
+    .copy-btn:hover { border-color: var(--cyan); color: var(--cyan); }
+    .copy-btn.copied { border-color: var(--green); color: var(--green); }
     .player-chip {
       display: flex; align-items: center; gap: 10px;
       background: var(--navy3);
@@ -641,6 +688,16 @@
           Share this code with friends
         </div>
       </div>
+
+      <!-- QR + Join URL — visible to host only, populated by enterLobby() -->
+      <div class="join-url-block" id="join-url-block">
+        <div class="join-url-label">📱 Scan to Join</div>
+        <div class="qr-wrap" id="qr-code"></div>
+        <div class="join-url-text" id="join-url-text">—</div>
+        <button class="copy-btn" id="copy-url-btn" onclick="copyJoinUrl()">
+          📋 Copy Link
+        </button>
+      </div>
       <div id="lobby-settings" style="display:flex;gap:8px;margin-bottom:14px">
         <div style="flex:1;background:var(--navy3);border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center">
           <div style="font-size:.65rem;color:var(--grey);text-transform:uppercase;letter-spacing:1.5px;font-family:var(--mono)">Questions</div>
@@ -746,6 +803,7 @@ const state = {
   questionStart: null,
   questionDuration: 35,
   currentAnswer: null,
+  joinUrl: null,
 };
 
 // ── Backend URL ───────────────────────────────────────────────────────────────
@@ -869,8 +927,44 @@ function enterLobby() {
   document.getElementById('lobby-gid').textContent = state.gameId;
   // Add class to <body> so CSS can show the host-only End Game button everywhere
   if (state.isHost) document.body.classList.add('is-host');
+
+  // ── Build join URL and QR code (host only) ────────────
+  if (state.isHost) {
+    // Construct the pre-filled join URL using the current frontend origin
+    const joinUrl = `${location.origin}${location.pathname}?join=${state.gameId}`;
+    state.joinUrl = joinUrl;
+
+    // Show the block
+    const block = document.getElementById('join-url-block');
+    block.classList.add('visible');
+
+    // Render QR code — clear any previous render first
+    const qrContainer = document.getElementById('qr-code');
+    qrContainer.innerHTML = '';
+    new QRCode(qrContainer, {
+      text: joinUrl,
+      width: 160,
+      height: 160,
+      colorDark: '#090e1a',
+      colorLight: '#ffffff',
+      correctLevel: QRCode.CorrectLevel.M,
+    });
+
+    // Show the URL with game ID highlighted
+    document.getElementById('join-url-text').innerHTML =
+      joinUrl.replace(state.gameId, `<span>${state.gameId}</span>`);
+  }
+
   showScreen('lobby');
   connectWebSocket();
+
+  // ── Auto-fill join form if ?join=GAMEID is in the URL ─
+  // (Handles the case where a player scans the QR code)
+  const params = new URLSearchParams(location.search);
+  const autoJoin = params.get('join');
+  if (autoJoin) {
+    document.getElementById('join-gid').value = autoJoin.toUpperCase();
+  }
 }
 
 // ── End Game modal ─────────────────────────────────────────────────────────────
@@ -1148,7 +1242,37 @@ function showGameOver(msg) {
   }).join('');
 }
 
-// ── Utils ─────────────────────────────────────────────────────────────────────
+// ── Copy join URL to clipboard ────────────────────────────────────────────────
+async function copyJoinUrl() {
+  if (!state.joinUrl) return;
+  const btn = document.getElementById('copy-url-btn');
+  try {
+    await navigator.clipboard.writeText(state.joinUrl);
+    btn.textContent = '✓ Copied!';
+    btn.classList.add('copied');
+    setTimeout(() => {
+      btn.textContent = '📋 Copy Link';
+      btn.classList.remove('copied');
+    }, 2000);
+  } catch {
+    // Fallback for browsers that block clipboard without user gesture
+    btn.textContent = '✗ Failed';
+    setTimeout(() => { btn.textContent = '📋 Copy Link'; }, 2000);
+  }
+}
+
+// ── Auto-fill Game ID if page was opened via QR / shared link ────────────────
+(function autoFillFromUrl() {
+  const params = new URLSearchParams(location.search);
+  const gid = params.get('join');
+  if (gid) {
+    // Switch to join tab and pre-fill the game ID
+    switchTab('join');
+    document.getElementById('join-gid').value = gid.toUpperCase();
+    // Focus name field so user can type their name immediately
+    document.getElementById('join-name').focus();
+  }
+})();
 function esc(s) {
   return String(s)
     .replace(/&/g,'&amp;')
