@@ -814,9 +814,69 @@
       font-size: .8rem; color: var(--white); line-height: 1.4;
     }
     .help-tip .tip-icon { flex-shrink: 0; font-size: .9rem; margin-top: 1px; }
+    /* ── Server loading screen ─────────────────────────── */
+    #server-loading {
+      position: fixed; inset: 0; z-index: 999;
+      background: var(--navy);
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 20px;
+      transition: opacity .4s ease;
+    }
+    #server-loading.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+    .loading-logo {
+      font-family: var(--font);
+      font-size: 2.2rem; font-weight: 900;
+      color: var(--yellow);
+      text-shadow: 0 0 40px rgba(245,230,66,.5);
+      letter-spacing: -1px;
+    }
+    .loading-spinner {
+      width: 44px; height: 44px;
+      border: 4px solid var(--navy3);
+      border-top-color: var(--yellow);
+      border-radius: 50%;
+      animation: spin .8s linear infinite;
+    }
+    .loading-status {
+      font-family: var(--mono);
+      font-size: .8rem;
+      color: var(--grey);
+      text-align: center;
+      min-height: 1.2em;
+      padding: 0 24px;
+    }
+    .loading-status.error { color: var(--red); }
+    .loading-retry {
+      display: none;
+      padding: 10px 24px;
+      background: transparent;
+      border: 1.5px solid var(--yellow);
+      border-radius: 8px;
+      color: var(--yellow);
+      font-family: var(--font);
+      font-size: .85rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 1px;
+      cursor: pointer;
+      transition: background .15s;
+    }
+    .loading-retry:hover { background: rgba(245,230,66,.1); }
+    .loading-retry.visible { display: block; }
   </style>
 </head>
 <body>
+
+<!-- ══ SERVER HEALTH LOADING SCREEN ════════════════════════════════════════ -->
+<div id="server-loading">
+  <div class="loading-logo">Trivia⚡Blitz</div>
+  <div class="loading-spinner"></div>
+  <div class="loading-status" id="loading-status">Connecting to server…</div>
+  <button class="loading-retry" id="loading-retry" onclick="checkHealth()">Retry</button>
+</div>
+
 <div id="app">
 
   <!-- ══ END GAME CONFIRMATION MODAL ══════════════════════════════════════ -->
@@ -1793,23 +1853,77 @@ async function copyJoinUrl() {
   }
 }
 
-// ── Startup: check for saved session or ?join= URL param ─────────────────────
-(function startup() {
+// ── Server health check — runs before anything is shown ──────────────────────
+const HEALTH_RETRY_INTERVAL_MS = 3000;
+const HEALTH_MAX_ATTEMPTS      = 10;
+let   healthAttempt            = 0;
+
+async function checkHealth() {
+  const statusEl = document.getElementById('loading-status');
+  const retryBtn = document.getElementById('loading-retry');
+  const overlay  = document.getElementById('server-loading');
+
+  retryBtn.classList.remove('visible');
+  healthAttempt++;
+
+  statusEl.className = 'loading-status';
+  statusEl.textContent = healthAttempt === 1
+    ? 'Connecting to server…'
+    : `Retrying… (attempt ${healthAttempt})`;
+
+  try {
+    const res = await fetch(API('/health'), { signal: AbortSignal.timeout(8000) });
+    if (res.ok) {
+      // Server is up — fade out overlay and boot the app
+      statusEl.textContent = 'Connected!';
+      overlay.classList.add('hidden');
+      overlay.addEventListener('transitionend', () => overlay.remove(), { once: true });
+      bootApp();
+      return;
+    }
+    throw new Error(`HTTP ${res.status}`);
+  } catch (err) {
+    const isTimeout = err.name === 'TimeoutError' || err.name === 'AbortError';
+    statusEl.className = 'loading-status error';
+    statusEl.textContent = isTimeout
+      ? 'Server is taking too long to respond.'
+      : 'Could not reach the server.';
+
+    if (healthAttempt < HEALTH_MAX_ATTEMPTS) {
+      // Auto-retry with countdown
+      let countdown = HEALTH_RETRY_INTERVAL_MS / 1000;
+      const tick = setInterval(() => {
+        countdown--;
+        if (countdown <= 0) {
+          clearInterval(tick);
+          checkHealth();
+        } else {
+          statusEl.textContent = `Retrying in ${countdown}s…`;
+        }
+      }, 1000);
+    } else {
+      // Give up auto-retrying — show manual retry button
+      statusEl.textContent = 'Server unavailable. Please try again later.';
+      retryBtn.classList.add('visible');
+      healthAttempt = 0;   // reset so manual retry gets fresh attempts
+    }
+  }
+}
+
+// ── Boot: everything that previously ran in the startup IIFE ─────────────────
+function bootApp() {
   // 1. Check for a saved session first (page refresh mid-game)
   const session = loadSession();
   if (session && session.gameId && session.playerId) {
-    // Restore state from session
     state.gameId     = session.gameId;
     state.playerId   = session.playerId;
     state.playerName = session.playerName;
     state.isHost     = session.isHost;
 
-    // Populate and show the rejoin screen
     document.getElementById('rejoin-game-id').textContent     = session.gameId;
     document.getElementById('rejoin-player-name').textContent = session.playerName;
     document.getElementById('rejoin-role').textContent        = session.isHost ? 'Host' : 'Player';
 
-    // Start on rejoin screen instead of home
     document.getElementById('screen-home').classList.remove('active');
     document.getElementById('screen-rejoin').classList.add('active');
     return;
@@ -1823,7 +1937,10 @@ async function copyJoinUrl() {
     document.getElementById('join-gid').value = gid.toUpperCase();
     document.getElementById('join-name').focus();
   }
-})();
+}
+
+// Kick off the health check immediately on page load
+checkHealth();
 function esc(s) {
   return String(s)
     .replace(/&/g,'&amp;')
