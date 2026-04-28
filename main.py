@@ -37,11 +37,11 @@ questions_path = Path(__file__).parent / "questions.json"
 ALL_QUESTIONS: List[dict] = json.loads(questions_path.read_text())
 
 # ── Constants ─────────────────────────────────────────────────────────────────
-JOIN_WINDOW_SECONDS = 60
+JOIN_WINDOW_SECONDS = 25
 QUESTION_TIMER_SECONDS = 35
 LEADERBOARD_DISPLAY_SECONDS = 6
 SPEED_BONUS_MULTIPLIER = 0.05
-MAX_CONCURRENT_GAMES = 5          # hard cap on simultaneous active games
+MAX_CONCURRENT_GAMES = 100          # hard cap on simultaneous active games
 MAX_PLAYERS_PER_GAME = 100          # hard cap on players per game
 
 # ── Game state ────────────────────────────────────────────────────────────────
@@ -56,6 +56,7 @@ class PlayerState:
         self.score: float = 0.0
         self.answered_current: bool = False
         self.current_answer: Optional[str] = None
+        self.correct_answers: int = 0
 
 
 class GameState:
@@ -94,6 +95,7 @@ class GameState:
                 "name": p.name,
                 "score": round(p.score, 2),
                 "rank": rank,
+                "correct_answers": p.correct_answers,
             })
         return result
 
@@ -235,6 +237,7 @@ async def run_game(game: GameState):
     await broadcast(game, {
         "type": "game_over",
         "leaderboard": game.leaderboard(),
+        "total_questions": len(game.questions),
     })
 
     # Small delay so clients receive game_over before the WS is closed
@@ -454,6 +457,7 @@ async def websocket_endpoint(websocket: WebSocket, game_id: str, player_id: str)
                     if answer == q["correct"]:
                         bonus = SPEED_BONUS_MULTIPLIER * seconds_remaining
                         player.score += 1 + bonus
+                        player.correct_answers += 1
 
                 # Acknowledge to player
                 await send_to(websocket, {
@@ -478,6 +482,7 @@ async def websocket_endpoint(websocket: WebSocket, game_id: str, player_id: str)
                 await broadcast(game, {
                     "type": "game_ended_by_host",
                     "leaderboard": final_leaderboard,
+                    "total_questions": len(game.questions),
                 })
 
                 # Small delay so clients receive the message before WS closes
