@@ -37,12 +37,12 @@ questions_path = Path(__file__).parent / "questions.json"
 ALL_QUESTIONS: List[dict] = json.loads(questions_path.read_text())
 
 # ── Constants ─────────────────────────────────────────────────────────────────
-JOIN_WINDOW_SECONDS = 25
-QUESTION_TIMER_SECONDS = 35
-LEADERBOARD_DISPLAY_SECONDS = 6
-SPEED_BONUS_MULTIPLIER = 0.05
-MAX_CONCURRENT_GAMES = 100          # hard cap on simultaneous active games
-MAX_PLAYERS_PER_GAME = 100          # hard cap on players per game
+JOIN_WINDOW_SECONDS = os.getenv("JOIN_WINDOW_SECONDS",60)
+QUESTION_TIMER_SECONDS = os.getenv("JOIN_WINDOW_SECONDS",35)
+LEADERBOARD_DISPLAY_SECONDS = os.getenv("LEADERBOARD_DISPLAY_SECONDS",6)
+SPEED_BONUS_MULTIPLIER = os.getenv("SPEED_BONUS_MULTIPLIER",0.05)
+MAX_CONCURRENT_GAMES = os.getenv("MAX_CONCURRENT_GAMES",5)          # hard cap on simultaneous active games
+MAX_PLAYERS_PER_GAME = os.getenv("MAX_PLAYERS_PER_GAME",100)          # hard cap on players per game
 
 # ── Game state ────────────────────────────────────────────────────────────────
 # game_id -> GameState
