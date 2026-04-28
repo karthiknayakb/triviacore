@@ -1,8 +1,8 @@
-# TriviaBlitz ⚡
+# QuizKombat ⚡
 
 A real-time multiplayer trivia game built with **FastAPI** and **vanilla JavaScript**. Players join from any device using a Game ID or QR code and compete simultaneously on the same questions with live scoring and leaderboards.
 
-🎮 **[Click here to play → TriviaBlitz](https://karthiknayakb.github.io/triviacore/)**
+🎮 **[Click here to play → QuizKombat](https://karthiknayakb.github.io/triviacore/)**
 
 ---
 
