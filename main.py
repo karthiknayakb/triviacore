@@ -22,7 +22,7 @@ _raw_origins = os.environ.get(
 )
 ALLOWED_ORIGINS: List[str] = [o.strip() for o in _raw_origins.split(",") if o.strip()]
 
-app = FastAPI(title="Trivia Game API")
+app = FastAPI(title="QuizKombat API")
 
 app.add_middleware(
     CORSMiddleware,
@@ -545,7 +545,7 @@ async def get_categories():
 
 @app.get("/")
 async def root():
-    return {"message": "TriviaBlitz API is running"}
+    return {"message": "QuizKombat API is running"}
 
 
 @app.get("/health")
