@@ -1,0 +1,1171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TriviaBlitz ⚡</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@400;600;800;900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+  <style>
+    /* ── Variables ─────────────────────────────────────── */
+    :root {
+      --navy:    #090e1a;
+      --navy2:   #0f1729;
+      --navy3:   #162038;
+      --yellow:  #f5e642;
+      --yellow2: #ffe94d;
+      --cyan:    #3cf0d6;
+      --pink:    #ff4fa3;
+      --green:   #3dff8f;
+      --red:     #ff4f4f;
+      --white:   #f0f4ff;
+      --grey:    #8899bb;
+      --border:  rgba(245,230,66,.18);
+      --glow:    0 0 24px rgba(245,230,66,.35);
+      --radius:  14px;
+      --font:    'Exo 2', sans-serif;
+      --mono:    'Space Mono', monospace;
+    }
+
+    /* ── Reset & Base ──────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      height: 100%;
+      background: var(--navy);
+      color: var(--white);
+      font-family: var(--font);
+      overflow-x: hidden;
+    }
+    body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      background-image:
+        radial-gradient(ellipse 80% 50% at 50% -10%, rgba(245,230,66,.08) 0%, transparent 70%),
+        radial-gradient(ellipse 60% 40% at 80% 110%, rgba(60,240,214,.05) 0%, transparent 70%);
+    }
+
+    /* ── Grid scanlines ────────────────────────────────── */
+    body::before {
+      content: '';
+      position: fixed; inset: 0; pointer-events: none; z-index: 0;
+      background-image:
+        repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(255,255,255,.012) 3px, rgba(255,255,255,.012) 4px);
+    }
+
+    /* ── App wrapper ───────────────────────────────────── */
+    #app {
+      position: relative; z-index: 1;
+      width: 100%; max-width: 540px;
+      padding: 16px 16px 40px;
+      min-height: 100vh;
+      display: flex; flex-direction: column;
+    }
+
+    /* ── Logo / Header ─────────────────────────────────── */
+    .logo {
+      text-align: center;
+      padding: 28px 0 18px;
+    }
+    .logo h1 {
+      font-size: clamp(2rem, 9vw, 3rem);
+      font-weight: 900;
+      letter-spacing: -1px;
+      color: var(--yellow);
+      text-shadow: 0 0 40px rgba(245,230,66,.5), 0 2px 0 rgba(0,0,0,.5);
+    }
+    .logo .bolt { font-style: normal; animation: bolt-pulse 1.6s ease-in-out infinite; }
+    .logo p { color: var(--grey); font-size: .85rem; font-family: var(--mono); margin-top: 4px; }
+    @keyframes bolt-pulse {
+      0%,100% { text-shadow: 0 0 8px var(--yellow), 0 0 30px rgba(245,230,66,.6); }
+      50%      { text-shadow: 0 0 2px var(--yellow), 0 0 8px rgba(245,230,66,.3); }
+    }
+
+    /* ── Card ──────────────────────────────────────────── */
+    .card {
+      background: var(--navy2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      margin-bottom: 14px;
+      box-shadow: 0 4px 32px rgba(0,0,0,.4);
+    }
+    .card-title {
+      font-size: 1.1rem;
+      font-weight: 800;
+      color: var(--yellow);
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      margin-bottom: 16px;
+      font-family: var(--mono);
+    }
+
+    /* ── Inputs ────────────────────────────────────────── */
+    .field { margin-bottom: 14px; }
+    .field label {
+      display: block;
+      font-size: .75rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 1.5px;
+      color: var(--grey); margin-bottom: 6px;
+    }
+    .field input {
+      width: 100%;
+      background: var(--navy3);
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      color: var(--white);
+      font-family: var(--mono);
+      font-size: 1rem;
+      padding: 12px 14px;
+      outline: none;
+      transition: border-color .2s, box-shadow .2s;
+    }
+    .field input:focus {
+      border-color: var(--yellow);
+      box-shadow: 0 0 0 3px rgba(245,230,66,.15);
+    }
+    .field input::placeholder { color: rgba(136,153,187,.5); }
+
+    /* ── Buttons ───────────────────────────────────────── */
+    .btn {
+      display: block; width: 100%;
+      padding: 14px 20px;
+      border: none; border-radius: 10px;
+      font-family: var(--font);
+      font-size: 1rem; font-weight: 800;
+      letter-spacing: 1px; text-transform: uppercase;
+      cursor: pointer;
+      transition: transform .12s, box-shadow .12s, filter .12s;
+      position: relative; overflow: hidden;
+    }
+    .btn:active { transform: scale(.97); }
+    .btn-primary {
+      background: var(--yellow);
+      color: var(--navy);
+      box-shadow: 0 4px 20px rgba(245,230,66,.35);
+    }
+    .btn-primary:hover { filter: brightness(1.08); box-shadow: 0 6px 28px rgba(245,230,66,.5); }
+    .btn-secondary {
+      background: transparent;
+      color: var(--cyan);
+      border: 1.5px solid var(--cyan);
+    }
+    .btn-secondary:hover { background: rgba(60,240,214,.08); }
+    .btn + .btn { margin-top: 10px; }
+    .btn:disabled { opacity: .45; cursor: not-allowed; transform: none !important; }
+
+    /* ── Tabs ──────────────────────────────────────────── */
+    .tabs {
+      display: flex; gap: 0;
+      border-radius: 10px; overflow: hidden;
+      border: 1.5px solid var(--border);
+      margin-bottom: 20px;
+    }
+    .tab {
+      flex: 1;
+      padding: 11px;
+      background: transparent;
+      border: none;
+      color: var(--grey);
+      font-family: var(--font);
+      font-size: .85rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 1px;
+      cursor: pointer;
+      transition: background .2s, color .2s;
+    }
+    .tab.active { background: var(--yellow); color: var(--navy); }
+
+    /* ── Divider ───────────────────────────────────────── */
+    .divider {
+      display: flex; align-items: center; gap: 10px;
+      color: var(--grey); font-size: .75rem;
+      margin: 18px 0;
+    }
+    .divider::before, .divider::after {
+      content: ''; flex: 1; height: 1px;
+      background: var(--border);
+    }
+
+    /* ── Screens ───────────────────────────────────────── */
+    .screen { display: none; flex-direction: column; flex: 1; }
+    .screen.active { display: flex; }
+    .fade-in { animation: fadeIn .35s ease; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* ── Error ─────────────────────────────────────────── */
+    .error-box {
+      background: rgba(255,79,79,.12);
+      border: 1px solid rgba(255,79,79,.4);
+      border-radius: 8px;
+      color: var(--red);
+      font-size: .85rem; font-weight: 600;
+      padding: 10px 14px;
+      margin-bottom: 12px;
+      display: none;
+    }
+    .error-box.visible { display: block; }
+
+    /* ── Lobby ─────────────────────────────────────────── */
+    .game-id-display {
+      text-align: center;
+      background: var(--navy3);
+      border: 1.5px dashed var(--yellow);
+      border-radius: 10px;
+      padding: 16px;
+      margin-bottom: 18px;
+    }
+    .game-id-display .label {
+      font-size: .7rem; color: var(--grey);
+      text-transform: uppercase; letter-spacing: 2px;
+      font-family: var(--mono);
+    }
+    .game-id-display .gid {
+      font-size: 2.4rem; font-weight: 900;
+      color: var(--yellow);
+      letter-spacing: 6px;
+      font-family: var(--mono);
+      text-shadow: var(--glow);
+    }
+
+    .countdown-ring {
+      display: flex; flex-direction: column; align-items: center;
+      margin: 10px 0 18px;
+    }
+    .ring-wrap { position: relative; width: 88px; height: 88px; }
+    .ring-wrap svg { transform: rotate(-90deg); }
+    .ring-bg { fill: none; stroke: var(--navy3); stroke-width: 7; }
+    .ring-fg { fill: none; stroke: var(--cyan); stroke-width: 7; stroke-linecap: round;
+               stroke-dasharray: 238; transition: stroke-dashoffset .9s linear; }
+    .ring-num {
+      position: absolute; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--mono); font-size: 1.6rem; font-weight: 700;
+      color: var(--cyan);
+    }
+    .ring-label { font-size: .7rem; color: var(--grey); text-transform: uppercase; letter-spacing: 1.5px; margin-top: 6px; }
+
+    .players-list { display: flex; flex-direction: column; gap: 8px; }
+    .player-chip {
+      display: flex; align-items: center; gap: 10px;
+      background: var(--navy3);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 9px 12px;
+      animation: slideIn .25s ease;
+    }
+    @keyframes slideIn { from { opacity: 0; transform: translateX(-12px); } to { opacity: 1; transform: translateX(0); } }
+    .player-chip .avatar {
+      width: 30px; height: 30px;
+      border-radius: 50%;
+      background: var(--yellow);
+      color: var(--navy);
+      display: flex; align-items: center; justify-content: center;
+      font-size: .8rem; font-weight: 900;
+      flex-shrink: 0;
+    }
+    .player-chip .pname { font-weight: 600; font-size: .9rem; }
+    .player-chip .host-badge {
+      margin-left: auto;
+      font-size: .65rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 1px;
+      color: var(--yellow);
+      background: rgba(245,230,66,.12);
+      border: 1px solid rgba(245,230,66,.3);
+      border-radius: 4px;
+      padding: 2px 6px;
+    }
+
+    /* ── Question screen ───────────────────────────────── */
+    .q-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 14px;
+    }
+    .q-progress {
+      font-family: var(--mono); font-size: .78rem; color: var(--grey);
+    }
+    .q-category {
+      font-size: .72rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 1px;
+      color: var(--cyan);
+      background: rgba(60,240,214,.1);
+      border: 1px solid rgba(60,240,214,.25);
+      border-radius: 4px; padding: 3px 8px;
+    }
+    .q-timer-bar-wrap {
+      height: 6px; background: var(--navy3); border-radius: 3px; overflow: hidden;
+      margin-bottom: 18px;
+    }
+    .q-timer-bar {
+      height: 100%;
+      background: linear-gradient(90deg, var(--green), var(--cyan));
+      border-radius: 3px;
+      transition: width .9s linear, background .9s;
+    }
+    .q-timer-bar.warning { background: linear-gradient(90deg, var(--red), var(--pink)); }
+
+    .q-text {
+      font-size: clamp(1.05rem, 4vw, 1.25rem);
+      font-weight: 700; line-height: 1.45;
+      margin-bottom: 22px; color: var(--white);
+    }
+
+    .options-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+    .options-grid.truefalse { grid-template-columns: 1fr 1fr; }
+    .option-btn {
+      padding: 16px 12px;
+      background: var(--navy3);
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      color: var(--white);
+      font-family: var(--font);
+      font-size: .92rem; font-weight: 700;
+      cursor: pointer;
+      text-align: center;
+      transition: border-color .15s, background .15s, transform .12s;
+      line-height: 1.3;
+    }
+    .option-btn:hover:not(:disabled) {
+      border-color: var(--yellow);
+      background: rgba(245,230,66,.07);
+      transform: translateY(-2px);
+    }
+    .option-btn:active:not(:disabled) { transform: scale(.97); }
+    .option-btn.selected {
+      border-color: var(--cyan);
+      background: rgba(60,240,214,.1);
+      color: var(--cyan);
+    }
+    .option-btn.correct {
+      border-color: var(--green);
+      background: rgba(61,255,143,.12);
+      color: var(--green);
+    }
+    .option-btn.incorrect {
+      border-color: var(--red);
+      background: rgba(255,79,79,.1);
+      color: var(--red);
+    }
+    .option-btn:disabled { cursor: default; }
+
+    .answered-status {
+      text-align: center;
+      font-family: var(--mono);
+      font-size: .82rem;
+      color: var(--cyan);
+      padding: 8px;
+      animation: fadeIn .3s ease;
+    }
+
+    .q-timer-num {
+      font-family: var(--mono);
+      font-size: 2rem; font-weight: 700;
+      text-align: center;
+      color: var(--white);
+      margin-bottom: 6px;
+    }
+    .q-timer-num.urgent { color: var(--red); animation: pulse .5s ease infinite alternate; }
+    @keyframes pulse { to { transform: scale(1.06); } }
+
+    /* ── Leaderboard screen ────────────────────────────── */
+    .lb-header {
+      text-align: center; margin-bottom: 20px;
+    }
+    .lb-header h2 {
+      font-size: 1.4rem; font-weight: 900;
+      color: var(--yellow); text-transform: uppercase;
+      letter-spacing: 2px;
+    }
+    .lb-header .correct-answer {
+      font-family: var(--mono);
+      font-size: .82rem; color: var(--grey);
+      margin-top: 4px;
+    }
+    .lb-header .correct-answer span { color: var(--green); font-weight: 700; }
+
+    .lb-list { display: flex; flex-direction: column; gap: 8px; }
+    .lb-row {
+      display: flex; align-items: center; gap: 12px;
+      background: var(--navy3);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 14px;
+      animation: slideIn .2s ease both;
+    }
+    .lb-row.me { border-color: var(--cyan); background: rgba(60,240,214,.07); }
+    .lb-row.rank1 { border-color: var(--yellow); background: rgba(245,230,66,.07); }
+    .lb-rank {
+      font-family: var(--mono); font-size: 1rem; font-weight: 700;
+      color: var(--grey); min-width: 28px; text-align: center;
+    }
+    .lb-rank.gold   { color: var(--yellow); }
+    .lb-rank.silver { color: #c0c8d8; }
+    .lb-rank.bronze { color: #d4a574; }
+    .lb-name { flex: 1; font-weight: 700; font-size: .95rem; }
+    .lb-score {
+      font-family: var(--mono); font-size: .95rem; font-weight: 700;
+      color: var(--cyan);
+    }
+
+    .next-hint {
+      text-align: center; font-size: .78rem;
+      color: var(--grey); font-family: var(--mono);
+      margin-top: 14px;
+    }
+
+    /* ── Game over ─────────────────────────────────────── */
+    .gameover-banner {
+      text-align: center; padding: 24px 0 16px;
+    }
+    .gameover-banner h2 {
+      font-size: clamp(1.6rem, 8vw, 2.4rem);
+      font-weight: 900; color: var(--yellow);
+      text-shadow: var(--glow);
+      text-transform: uppercase; letter-spacing: 2px;
+    }
+    .winner-box {
+      text-align: center;
+      background: rgba(245,230,66,.06);
+      border: 1.5px solid rgba(245,230,66,.25);
+      border-radius: 12px;
+      padding: 16px; margin-bottom: 16px;
+    }
+    .winner-box .crown { font-size: 2.5rem; }
+    .winner-box .winner-name { font-size: 1.4rem; font-weight: 900; color: var(--yellow); }
+    .winner-box .winner-score { font-family: var(--mono); color: var(--grey); font-size: .9rem; }
+
+    /* ── Status pill ───────────────────────────────────── */
+    .status-pill {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-size: .72rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 1px;
+      background: rgba(61,255,143,.1);
+      border: 1px solid rgba(61,255,143,.25);
+      border-radius: 20px; padding: 4px 10px;
+      color: var(--green);
+    }
+    .status-pill .dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--green); animation: blink 1.2s ease infinite;
+    }
+    @keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: .3; } }
+
+    /* ── Starting overlay ──────────────────────────────── */
+    .starting-screen {
+      text-align: center;
+      flex: 1; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 16px;
+    }
+    .starting-screen h2 {
+      font-size: 1.6rem; font-weight: 900;
+      color: var(--yellow); text-transform: uppercase; letter-spacing: 2px;
+    }
+    .starting-screen p { color: var(--grey); font-family: var(--mono); font-size: .85rem; }
+    .spinner {
+      width: 48px; height: 48px;
+      border: 4px solid var(--navy3);
+      border-top-color: var(--yellow);
+      border-radius: 50%;
+      animation: spin .8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Responsive tweaks ─────────────────────────────── */
+    @media (max-width: 380px) {
+      .options-grid { grid-template-columns: 1fr; }
+      .gid { font-size: 2rem !important; }
+    }
+
+    /* ── End Game button (host only) ───────────────────── */
+    .end-game-btn {
+      display: none;                        /* hidden by default; shown for host */
+      align-items: center; justify-content: center; gap: 7px;
+      width: 100%;
+      margin-top: 12px;
+      padding: 11px 16px;
+      background: rgba(255,79,79,.08);
+      border: 1.5px solid rgba(255,79,79,.4);
+      border-radius: 10px;
+      color: var(--red);
+      font-family: var(--font);
+      font-size: .85rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 1px;
+      cursor: pointer;
+      transition: background .15s, border-color .15s, transform .12s;
+    }
+    .end-game-btn:hover { background: rgba(255,79,79,.15); border-color: rgba(255,79,79,.7); }
+    .end-game-btn:active { transform: scale(.97); }
+    body.is-host .end-game-btn { display: flex; }
+
+    /* ── Confirmation modal ────────────────────────────── */
+    .modal-backdrop {
+      display: none;
+      position: fixed; inset: 0; z-index: 100;
+      background: rgba(9,14,26,.85);
+      backdrop-filter: blur(4px);
+      align-items: center; justify-content: center;
+      padding: 24px;
+    }
+    .modal-backdrop.open { display: flex; }
+    .modal {
+      background: var(--navy2);
+      border: 1.5px solid rgba(255,79,79,.4);
+      border-radius: 16px;
+      padding: 28px 24px 20px;
+      max-width: 360px; width: 100%;
+      box-shadow: 0 8px 48px rgba(0,0,0,.6);
+      animation: modalIn .2s ease;
+    }
+    @keyframes modalIn {
+      from { opacity: 0; transform: scale(.93) translateY(10px); }
+      to   { opacity: 1; transform: scale(1)   translateY(0); }
+    }
+    .modal-icon { font-size: 2.2rem; text-align: center; margin-bottom: 12px; }
+    .modal h3 {
+      font-size: 1.1rem; font-weight: 900;
+      color: var(--white); text-align: center;
+      margin-bottom: 6px; letter-spacing: .5px;
+    }
+    .modal p {
+      font-size: .82rem; color: var(--grey);
+      text-align: center; line-height: 1.5;
+      margin-bottom: 20px; font-family: var(--mono);
+    }
+    .modal-actions { display: flex; gap: 10px; }
+    .modal-actions .btn { flex: 1; padding: 12px; font-size: .88rem; }
+    .btn-danger {
+      background: var(--red);
+      color: #fff;
+      box-shadow: 0 4px 16px rgba(255,79,79,.35);
+    }
+    .btn-danger:hover { filter: brightness(1.1); }
+    .btn-ghost {
+      background: transparent;
+      color: var(--grey);
+      border: 1.5px solid var(--border);
+    }
+    .btn-ghost:hover { border-color: var(--grey); color: var(--white); }
+  </style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ══ END GAME CONFIRMATION MODAL ══════════════════════════════════════ -->
+  <div id="end-game-modal" class="modal-backdrop" role="dialog" aria-modal="true">
+    <div class="modal">
+      <div class="modal-icon">⚠️</div>
+      <h3>End the game?</h3>
+      <p>This will immediately stop the game for all players and show the current leaderboard. This cannot be undone.</p>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" onclick="closeEndGameModal()">Cancel</button>
+        <button class="btn btn-danger" onclick="confirmEndGame()">End Game</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ SCREEN: Home ══════════════════════════════════════════════════════ -->
+  <div id="screen-home" class="screen active fade-in">
+    <div class="logo">
+      <h1>Trivia<em class="bolt">⚡</em>Blitz</h1>
+      <p>Real-time multiplayer trivia</p>
+    </div>
+
+    <div class="card">
+      <div class="tabs">
+        <button class="tab active" onclick="switchTab('join')">Join Game</button>
+        <button class="tab" onclick="switchTab('host')">Host Game</button>
+      </div>
+
+      <!-- Join tab -->
+      <div id="tab-join">
+        <div id="join-error" class="error-box"></div>
+        <div class="field">
+          <label>Game ID</label>
+          <input id="join-gid" type="text" placeholder="e.g. AB3X72" maxlength="8"
+                 oninput="this.value=this.value.toUpperCase()" />
+        </div>
+        <div class="field">
+          <label>Your Name</label>
+          <input id="join-name" type="text" placeholder="Enter display name" maxlength="20" />
+        </div>
+        <button class="btn btn-primary" onclick="joinGame()">Join Game →</button>
+      </div>
+
+      <!-- Host tab -->
+      <div id="tab-host" style="display:none">
+        <div id="host-error" class="error-box"></div>
+        <div class="field">
+          <label>Your Name</label>
+          <input id="host-name" type="text" placeholder="Enter your name" maxlength="20" />
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div class="field" style="margin-bottom:0">
+            <label>Questions <span style="color:var(--grey);font-weight:400">(1–50)</span></label>
+            <input id="host-num-questions" type="number" min="1" max="50" value="10" />
+          </div>
+          <div class="field" style="margin-bottom:0">
+            <label>Secs / Q <span style="color:var(--grey);font-weight:400">(15–120)</span></label>
+            <input id="host-question-time" type="number" min="15" max="120" value="35" />
+          </div>
+        </div>
+        <div style="height:14px"></div>
+        <button class="btn btn-primary" onclick="createGame()">Create Game →</button>
+        <div class="divider">or</div>
+        <p style="font-size:.8rem;color:var(--grey);text-align:center;line-height:1.5">
+          As host you'll get a 6-8 character Game ID.<br>Share it with friends to join!
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ SCREEN: Lobby ════════════════════════════════════════════════════ -->
+  <div id="screen-lobby" class="screen fade-in">
+    <div class="logo">
+      <h1>Trivia<em class="bolt">⚡</em>Blitz</h1>
+    </div>
+    <div class="card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+        <span class="card-title" style="margin-bottom:0">Lobby</span>
+        <span class="status-pill"><span class="dot"></span>Waiting</span>
+      </div>
+      <div class="game-id-display">
+        <div class="label">Game ID</div>
+        <div class="gid" id="lobby-gid">———</div>
+        <div style="font-size:.72rem;color:var(--grey);margin-top:4px;font-family:var(--mono)">
+          Share this code with friends
+        </div>
+      </div>
+      <div id="lobby-settings" style="display:flex;gap:8px;margin-bottom:14px">
+        <div style="flex:1;background:var(--navy3);border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center">
+          <div style="font-size:.65rem;color:var(--grey);text-transform:uppercase;letter-spacing:1.5px;font-family:var(--mono)">Questions</div>
+          <div id="lobby-num-questions" style="font-size:1.3rem;font-weight:900;color:var(--yellow);font-family:var(--mono)">—</div>
+        </div>
+        <div style="flex:1;background:var(--navy3);border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center">
+          <div style="font-size:.65rem;color:var(--grey);text-transform:uppercase;letter-spacing:1.5px;font-family:var(--mono)">Secs / Q</div>
+          <div id="lobby-question-timer" style="font-size:1.3rem;font-weight:900;color:var(--cyan);font-family:var(--mono)">—</div>
+        </div>
+      </div>
+      <div class="countdown-ring">
+        <div class="ring-wrap">
+          <svg viewBox="0 0 88 88" width="88" height="88">
+            <circle class="ring-bg" cx="44" cy="44" r="38"/>
+            <circle class="ring-fg" id="lobby-ring" cx="44" cy="44" r="38"/>
+          </svg>
+          <div class="ring-num" id="lobby-countdown">25</div>
+        </div>
+        <div class="ring-label">seconds until start</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Players (<span id="lobby-count">0</span>)</div>
+      <div class="players-list" id="players-list"></div>
+    </div>
+    <button class="end-game-btn" onclick="openEndGameModal()">
+      <span>■</span> End Game
+    </button>
+  </div>
+
+  <!-- ══ SCREEN: Starting ══════════════════════════════════════════════════ -->
+  <div id="screen-starting" class="screen fade-in">
+    <div class="starting-screen">
+      <div class="spinner"></div>
+      <h2>Game Starting!</h2>
+      <p>Get ready…</p>
+    </div>
+    <button class="end-game-btn" onclick="openEndGameModal()">
+      <span>■</span> End Game
+    </button>
+  </div>
+
+  <!-- ══ SCREEN: Question ═════════════════════════════════════════════════ -->
+  <div id="screen-question" class="screen fade-in">
+    <div class="card" style="flex:1">
+      <div class="q-header">
+        <span class="q-progress" id="q-progress">Q 1 / 10</span>
+        <span class="q-category" id="q-category">Science</span>
+      </div>
+      <div class="q-timer-bar-wrap">
+        <div class="q-timer-bar" id="q-timer-bar"></div>
+      </div>
+      <div class="q-timer-num" id="q-timer-num">35</div>
+      <div class="q-text" id="q-text">Question text goes here</div>
+      <div class="options-grid" id="options-grid"></div>
+      <div class="answered-status" id="answered-status" style="display:none">
+        ✓ Answer submitted — waiting for others…
+      </div>
+    </div>
+    <button class="end-game-btn" onclick="openEndGameModal()">
+      <span>■</span> End Game
+    </button>
+  </div>
+
+  <!-- ══ SCREEN: Leaderboard ══════════════════════════════════════════════ -->
+  <div id="screen-leaderboard" class="screen fade-in">
+    <div class="card">
+      <div class="lb-header">
+        <h2>🏆 Leaderboard</h2>
+        <div class="correct-answer">Correct answer: <span id="lb-correct">—</span></div>
+      </div>
+      <div class="lb-list" id="lb-list"></div>
+      <div class="next-hint" id="next-hint"></div>
+    </div>
+    <button class="end-game-btn" onclick="openEndGameModal()">
+      <span>■</span> End Game
+    </button>
+  </div>
+
+  <!-- ══ SCREEN: Game Over ════════════════════════════════════════════════ -->
+  <div id="screen-gameover" class="screen fade-in">
+    <div class="gameover-banner"><h2>🎉 Game Over!</h2></div>
+    <div class="winner-box" id="winner-box"></div>
+    <div class="card">
+      <div class="card-title">Final Standings</div>
+      <div class="lb-list" id="final-lb-list"></div>
+    </div>
+    <button class="btn btn-primary" onclick="location.reload()" style="margin-top:10px">Play Again</button>
+  </div>
+
+</div>
+
+<script>
+// ── State ─────────────────────────────────────────────────────────────────────
+const state = {
+  gameId: null,
+  playerId: null,
+  playerName: null,
+  isHost: false,
+  ws: null,
+  questionTimer: null,
+  questionStart: null,
+  questionDuration: 35,
+  currentAnswer: null,
+};
+
+// ── Backend URL ───────────────────────────────────────────────────────────────
+// Replace this with your actual Koyeb deployment URL.
+// Format: 'https://your-app-name.koyeb.app'  (no trailing slash)
+const BACKEND = 'https://triviacore.onrender.com';
+
+const API = (path) => `${BACKEND}${path}`;
+const WS_BASE = () => BACKEND.replace(/^https:\/\//, 'wss://').replace(/^http:\/\//, 'ws://');
+
+// ── Screen management ─────────────────────────────────────────────────────────
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  const el = document.getElementById('screen-' + id);
+  el.classList.add('active');
+  // re-trigger fade
+  el.classList.remove('fade-in');
+  void el.offsetWidth;
+  el.classList.add('fade-in');
+}
+
+function switchTab(tab) {
+  document.querySelectorAll('.tab').forEach((t, i) => {
+    t.classList.toggle('active', (i === 0 && tab === 'join') || (i === 1 && tab === 'host'));
+  });
+  document.getElementById('tab-join').style.display = tab === 'join' ? '' : 'none';
+  document.getElementById('tab-host').style.display = tab === 'host' ? '' : 'none';
+}
+
+function showError(boxId, msg) {
+  const el = document.getElementById(boxId);
+  el.textContent = msg;
+  el.classList.add('visible');
+  setTimeout(() => el.classList.remove('visible'), 4000);
+}
+
+// ── Create game ───────────────────────────────────────────────────────────────
+async function createGame() {
+  const name  = document.getElementById('host-name').value.trim();
+  const numQ  = parseInt(document.getElementById('host-num-questions').value, 10);
+  const qTime = parseInt(document.getElementById('host-question-time').value, 10);
+
+  if (!name)                                        return showError('host-error', 'Please enter your name.');
+  if (isNaN(numQ)  || numQ  < 1   || numQ  > 50)   return showError('host-error', 'Number of questions must be between 1 and 50.');
+  if (isNaN(qTime) || qTime < 15  || qTime > 120)  return showError('host-error', 'Time per question must be between 15 and 120 seconds.');
+
+  const btn = document.querySelector('#tab-host .btn-primary');
+  if (btn.disabled) return;                         // already in-flight — ignore extra clicks
+  btn.disabled = true;
+  btn.textContent = 'Creating…';
+
+  try {
+    const res = await fetch(API('/api/game/create'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ host_name: name, num_questions: numQ, question_time: qTime }),
+    });
+    if (!res.ok) {
+      const d = await res.json();
+      showError('host-error', d.detail || 'Error');
+      btn.disabled = false;                         // re-enable so user can correct and retry
+      btn.textContent = 'Create Game →';
+      return;
+    }
+    const data = await res.json();
+    state.gameId = data.game_id;
+    state.playerId = data.host_id;
+    state.playerName = name;
+    state.isHost = true;
+    // Button stays disabled — we're navigating away to the lobby
+    enterLobby();
+  } catch {
+    showError('host-error', 'Could not reach server.');
+    btn.disabled = false;                           // re-enable on network failure
+    btn.textContent = 'Create Game →';
+  }
+}
+
+// ── Join game ─────────────────────────────────────────────────────────────────
+async function joinGame() {
+  const gid  = document.getElementById('join-gid').value.trim().toUpperCase();
+  const name = document.getElementById('join-name').value.trim();
+
+  if (!gid)  return showError('join-error', 'Enter a Game ID.');
+  if (!name) return showError('join-error', 'Enter your name.');
+
+  const btn = document.querySelector('#tab-join .btn-primary');
+  if (btn.disabled) return;                         // already in-flight — ignore extra clicks
+  btn.disabled = true;
+  btn.textContent = 'Joining…';
+
+  try {
+    const res = await fetch(API('/api/game/join'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ game_id: gid, player_name: name }),
+    });
+    if (!res.ok) {
+      const d = await res.json();
+      showError('join-error', d.detail || 'Error');
+      btn.disabled = false;                         // re-enable so user can correct and retry
+      btn.textContent = 'Join Game →';
+      return;
+    }
+    const data = await res.json();
+    state.gameId = data.game_id;
+    state.playerId = data.player_id;
+    state.playerName = name;
+    state.isHost = false;
+    // Button stays disabled — we're navigating away to the lobby
+    enterLobby();
+  } catch {
+    showError('join-error', 'Could not reach server.');
+    btn.disabled = false;                           // re-enable on network failure
+    btn.textContent = 'Join Game →';
+  }
+}
+
+// ── Lobby ─────────────────────────────────────────────────────────────────────
+function enterLobby() {
+  document.getElementById('lobby-gid').textContent = state.gameId;
+  // Add class to <body> so CSS can show the host-only End Game button everywhere
+  if (state.isHost) document.body.classList.add('is-host');
+  showScreen('lobby');
+  connectWebSocket();
+}
+
+// ── End Game modal ─────────────────────────────────────────────────────────────
+function openEndGameModal() {
+  document.getElementById('end-game-modal').classList.add('open');
+}
+
+function closeEndGameModal() {
+  document.getElementById('end-game-modal').classList.remove('open');
+}
+
+function confirmEndGame() {
+  closeEndGameModal();
+  if (state.ws && state.ws.readyState === WebSocket.OPEN) {
+    state.ws.send(JSON.stringify({ type: 'end_game' }));
+  }
+}
+
+// ── Lock all interactive elements after game ends ──────────────────────────────
+function lockUI(message) {
+  // Stop any running question timer
+  clearInterval(state.questionTimer);
+  state.questionTimer = null;
+
+  // Disable all answer buttons
+  document.querySelectorAll('.option-btn').forEach(b => b.disabled = true);
+
+  // Hide the End Game button (no longer meaningful)
+  document.querySelectorAll('.end-game-btn').forEach(b => b.style.display = 'none');
+
+  // Close the modal if open
+  closeEndGameModal();
+
+  // If we're not already on the gameover screen, show a neutral ended state
+  const onGameover = document.getElementById('screen-gameover').classList.contains('active');
+  if (!onGameover && message) {
+    showScreen('gameover');
+    document.querySelector('.gameover-banner h2').textContent = '🔌 Session Ended';
+    document.getElementById('winner-box').innerHTML = `
+      <p style="color:var(--grey);font-family:var(--mono);font-size:.85rem;line-height:1.6">${esc(message)}</p>
+    `;
+    document.getElementById('final-lb-list').innerHTML = '';
+  }
+}
+
+function updateLobbyPlayers(players, totalQuestions, questionTimer) {
+  const list = document.getElementById('players-list');
+  document.getElementById('lobby-count').textContent = players.length;
+  list.innerHTML = players.map(p => {
+    const isHost = p.player_id === state.playerId && state.isHost;
+    const initial = (p.name[0] || '?').toUpperCase();
+    return `<div class="player-chip">
+      <div class="avatar">${initial}</div>
+      <span class="pname">${esc(p.name)}</span>
+      ${isHost ? '<span class="host-badge">Host</span>' : ''}
+    </div>`;
+  }).join('');
+  // Update settings tiles if values provided
+  if (totalQuestions !== undefined)
+    document.getElementById('lobby-num-questions').textContent = totalQuestions;
+  if (questionTimer !== undefined)
+    document.getElementById('lobby-question-timer').textContent = questionTimer + 's';
+}
+
+function updateLobbyCountdown(seconds) {
+  const sRound = Math.ceil(seconds);
+  document.getElementById('lobby-countdown').textContent = sRound;
+  // SVG ring: circumference = 2*pi*38 ≈ 238.76
+  const circ = 238.76;
+  const pct = seconds / 25;
+  const offset = circ * (1 - pct);
+  const ring = document.getElementById('lobby-ring');
+  ring.style.strokeDashoffset = offset;
+  // Color shift
+  if (pct < 0.3) ring.style.stroke = 'var(--pink)';
+  else if (pct < 0.6) ring.style.stroke = 'var(--yellow)';
+  else ring.style.stroke = 'var(--cyan)';
+}
+
+// ── WebSocket ─────────────────────────────────────────────────────────────────
+function connectWebSocket() {
+  const url = `${WS_BASE()}/ws/${state.gameId}/${state.playerId}`;
+  state.ws = new WebSocket(url);
+
+  state.ws.onmessage = (e) => {
+    const msg = JSON.parse(e.data);
+    handleMessage(msg);
+  };
+
+  state.ws.onclose = (e) => {
+    // Null out so no further sends are attempted on a dead socket
+    state.ws = null;
+    // If the game already transitioned to gameover via a WS message
+    // (game_over / game_ended_by_host), the screen is already correct —
+    // lockUI() is a no-op there. If the socket closed unexpectedly
+    // (server cleanup) without a prior message, show a clear end state.
+    const onGameover = document.getElementById('screen-gameover').classList.contains('active');
+    if (!onGameover) {
+      lockUI('🔌 Session ended — the game is no longer available.');
+    }
+  };
+
+  state.ws.onerror = () => {
+    // onerror always fires before onclose; suppress console noise
+  };
+}
+
+function handleMessage(msg) {
+  switch (msg.type) {
+    case 'connected':
+      // Populate settings tiles immediately on connect (for joining players)
+      updateLobbyPlayers(msg.players, msg.total_questions, msg.question_timer);
+      break;
+
+    case 'lobby_countdown':
+      updateLobbyCountdown(msg.seconds_remaining);
+      updateLobbyPlayers(msg.players, msg.total_questions, msg.question_timer);
+      break;
+
+    case 'game_starting':
+      showScreen('starting');
+      break;
+
+    case 'question':
+      startQuestion(msg);
+      break;
+
+    case 'answer_received':
+      state.currentAnswer = msg.answer;
+      markAnswered();
+      break;
+
+    case 'leaderboard':
+      showLeaderboard(msg);
+      break;
+
+    case 'game_over':
+      lockUI();
+      showGameOver(msg);
+      break;
+
+    case 'game_ended_by_host':
+      // Stop any running question timer immediately
+      clearInterval(state.questionTimer);
+      // Disable answer buttons if question was active
+      document.querySelectorAll('.option-btn').forEach(b => b.disabled = true);
+      lockUI();
+      showGameOver({ leaderboard: msg.leaderboard, endedByHost: true });
+      break;
+  }
+}
+
+// ── Question ──────────────────────────────────────────────────────────────────
+function startQuestion(msg) {
+  showScreen('question');
+  state.currentAnswer = null;
+  state.questionStart = msg.start_time;
+  state.questionDuration = msg.timer;
+
+  document.getElementById('q-progress').textContent = `Q ${msg.question_index + 1} / ${msg.total_questions}`;
+  document.getElementById('q-category').textContent = msg.category || '';
+  document.getElementById('q-text').textContent = msg.text;
+  document.getElementById('answered-status').style.display = 'none';
+
+  // Options
+  const grid = document.getElementById('options-grid');
+  grid.className = 'options-grid' + (msg.question_type === 'truefalse' ? ' truefalse' : '');
+  grid.innerHTML = msg.options.map(opt =>
+    `<button class="option-btn" onclick="submitAnswer(this, '${esc(opt)}')">${esc(opt)}</button>`
+  ).join('');
+
+  // Timer
+  if (state.questionTimer) clearInterval(state.questionTimer);
+  state.questionTimer = setInterval(() => tickTimer(), 200);
+}
+
+function tickTimer() {
+  const now = Date.now() / 1000;
+  const elapsed = now - state.questionStart;
+  const remaining = Math.max(0, state.questionDuration - elapsed);
+  const pct = remaining / state.questionDuration;
+
+  const bar = document.getElementById('q-timer-bar');
+  const num = document.getElementById('q-timer-num');
+
+  bar.style.width = (pct * 100) + '%';
+  bar.classList.toggle('warning', pct < 0.3);
+  num.textContent = Math.ceil(remaining);
+  num.classList.toggle('urgent', remaining < 8);
+
+  if (remaining <= 0) {
+    clearInterval(state.questionTimer);
+    disableOptions();
+  }
+}
+
+function submitAnswer(btn, answer) {
+  if (state.currentAnswer) return;
+  state.currentAnswer = answer;
+
+  // Visual selection
+  document.querySelectorAll('.option-btn').forEach(b => {
+    b.disabled = true;
+    if (b === btn) b.classList.add('selected');
+  });
+
+  state.ws.send(JSON.stringify({ type: 'submit_answer', answer }));
+  document.getElementById('answered-status').style.display = 'block';
+}
+
+function markAnswered() {
+  document.getElementById('answered-status').style.display = 'block';
+}
+
+function disableOptions() {
+  document.querySelectorAll('.option-btn').forEach(b => b.disabled = true);
+  if (!state.currentAnswer) {
+    document.getElementById('answered-status').style.display = 'block';
+    document.getElementById('answered-status').textContent = '⏰ Time\'s up!';
+  }
+}
+
+// ── Leaderboard ───────────────────────────────────────────────────────────────
+function showLeaderboard(msg) {
+  clearInterval(state.questionTimer);
+  showScreen('leaderboard');
+
+  document.getElementById('lb-correct').textContent = msg.correct_answer;
+
+  const isLast = msg.question_index + 1 >= msg.total_questions;
+  document.getElementById('next-hint').textContent = isLast
+    ? 'Final leaderboard incoming…'
+    : `Next question in ${6} seconds…`;
+
+  // Highlight correct/incorrect on option buttons before switching (already switched)
+  // Build leaderboard
+  const list = document.getElementById('lb-list');
+  list.innerHTML = msg.leaderboard.map((p, i) => {
+    const rankClass = p.rank === 1 ? 'gold' : p.rank === 2 ? 'silver' : p.rank === 3 ? 'bronze' : '';
+    const rankLabel = p.rank === 1 ? '🥇' : p.rank === 2 ? '🥈' : p.rank === 3 ? '🥉' : `#${p.rank}`;
+    const isMe = p.player_id === state.playerId;
+    return `<div class="lb-row ${isMe ? 'me' : ''} ${p.rank === 1 ? 'rank1' : ''}" style="animation-delay:${i*0.06}s">
+      <div class="lb-rank ${rankClass}">${rankLabel}</div>
+      <div class="lb-name">${esc(p.name)}${isMe ? ' <span style="color:var(--cyan);font-size:.7rem">(you)</span>' : ''}</div>
+      <div class="lb-score">${p.score.toFixed(2)}</div>
+    </div>`;
+  }).join('');
+}
+
+// ── Game Over ─────────────────────────────────────────────────────────────────
+function showGameOver(msg) {
+  clearInterval(state.questionTimer);
+  showScreen('gameover');
+
+  // Distinguish natural end from host-forced end
+  const banner = document.querySelector('.gameover-banner h2');
+  banner.textContent = msg.endedByHost ? '🛑 Game Ended by Host' : '🎉 Game Over!';
+
+  const winner = msg.leaderboard[0];
+  document.getElementById('winner-box').innerHTML = winner ? `
+    <div class="crown">👑</div>
+    <div class="winner-name">${esc(winner.name)}</div>
+    <div class="winner-score">${winner.score.toFixed(2)} points</div>
+  ` : '';
+
+  const list = document.getElementById('final-lb-list');
+  list.innerHTML = msg.leaderboard.map((p, i) => {
+    const rankLabel = p.rank === 1 ? '🥇' : p.rank === 2 ? '🥈' : p.rank === 3 ? '🥉' : `#${p.rank}`;
+    const isMe = p.player_id === state.playerId;
+    return `<div class="lb-row ${isMe ? 'me' : ''} ${p.rank === 1 ? 'rank1' : ''}" style="animation-delay:${i*0.07}s">
+      <div class="lb-rank">${rankLabel}</div>
+      <div class="lb-name">${esc(p.name)}${isMe ? ' <span style="color:var(--cyan);font-size:.7rem">(you)</span>' : ''}</div>
+      <div class="lb-score">${p.score.toFixed(2)}</div>
+    </div>`;
+  }).join('');
+}
+
+// ── Utils ─────────────────────────────────────────────────────────────────────
+function esc(s) {
+  return String(s)
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;')
+    .replace(/'/g,'&#39;');
+}
+
+// Enter key support
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Enter') return;
+  const joinTab = document.getElementById('tab-join');
+  const hostTab = document.getElementById('tab-host');
+  if (joinTab.style.display !== 'none') joinGame();
+  else hostTab.style.display !== 'none' && createGame();
+});
+</script>
+</body>
+</html>
