@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Dict, List, Optional
 
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi.responses import Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
@@ -47,7 +48,7 @@ ALL_ANSWERED_WAIT_SECONDS = int(os.getenv("ALL_ANSWERED_WAIT_SECONDS",2)) # paus
 
 # ── Rapid Fire constants ──────────────────────────────────────────────────────
 RAPID_FIRE_QUESTION_COUNTS  = [12, 24]   # allowed question counts
-RAPID_FIRE_TIME_PER_QUESTION = int(os.getenv("RAPID_FIRE_TIME_PER_QUESTION", 3))
+RAPID_FIRE_TIME_PER_QUESTION = int(os.getenv("RAPID_FIRE_TIME_PER_QUESTION", 5))
 RAPID_FIRE_CORRECT_POINTS    = int(os.getenv("RAPID_FIRE_CORRECT_POINTS",    1))
 RAPID_FIRE_WRONG_POINTS      = int(os.getenv("RAPID_FIRE_WRONG_POINTS",     -1))
 RAPID_FIRE_UNANSWERED_POINTS = int(os.getenv("RAPID_FIRE_UNANSWERED_POINTS", 0))
@@ -611,6 +612,12 @@ async def get_rapid_fire_questions(count: int = 12):
 @app.get("/")
 async def root():
     return {"message": "QuizKombat API is running"}
+
+
+@app.head("/health")
+async def health_head():
+    """HEAD support for uptime monitors and load balancers."""
+    return Response(status_code=200)
 
 
 @app.get("/health")
