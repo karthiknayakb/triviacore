@@ -45,6 +45,13 @@ MAX_CONCURRENT_GAMES = int(os.getenv("MAX_CONCURRENT_GAMES",5))           # hard
 MAX_PLAYERS_PER_GAME = int(os.getenv("MAX_PLAYERS_PER_GAME",100))         # hard cap on players per game
 ALL_ANSWERED_WAIT_SECONDS = int(os.getenv("ALL_ANSWERED_WAIT_SECONDS",2)) # pause after all players answer early
 
+# ── Rapid Fire constants ──────────────────────────────────────────────────────
+RAPID_FIRE_QUESTION_COUNTS  = [12, 24]   # allowed question counts
+RAPID_FIRE_TIME_PER_QUESTION = int(os.getenv("RAPID_FIRE_TIME_PER_QUESTION", 5))
+RAPID_FIRE_CORRECT_POINTS    = int(os.getenv("RAPID_FIRE_CORRECT_POINTS",    1))
+RAPID_FIRE_WRONG_POINTS      = int(os.getenv("RAPID_FIRE_WRONG_POINTS",     -1))
+RAPID_FIRE_UNANSWERED_POINTS = int(os.getenv("RAPID_FIRE_UNANSWERED_POINTS", 0))
+
 # ── Game state ────────────────────────────────────────────────────────────────
 # game_id -> GameState
 games: Dict[str, "GameState"] = {}
@@ -577,6 +584,28 @@ async def get_categories():
         {"name": cat, "count": CATEGORY_COUNTS[cat]}
         for cat in ALL_CATEGORIES
     ]
+
+
+@app.get("/api/rapid-fire/questions")
+async def get_rapid_fire_questions(count: int = 12):
+    """Return a random set of questions for Rapid Fire single-player mode."""
+    if count not in RAPID_FIRE_QUESTION_COUNTS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"count must be one of {RAPID_FIRE_QUESTION_COUNTS}"
+        )
+    sample_size = min(count, len(ALL_QUESTIONS))
+    questions   = random.sample(ALL_QUESTIONS, sample_size)
+    return {
+        "count":            sample_size,
+        "time_per_question": RAPID_FIRE_TIME_PER_QUESTION,
+        "scoring": {
+            "correct":    RAPID_FIRE_CORRECT_POINTS,
+            "wrong":      RAPID_FIRE_WRONG_POINTS,
+            "unanswered": RAPID_FIRE_UNANSWERED_POINTS,
+        },
+        "questions": questions,
+    }
 
 
 @app.get("/")
