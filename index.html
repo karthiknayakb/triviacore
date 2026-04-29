@@ -892,6 +892,109 @@
     }
     .loading-retry:hover { background: rgba(245,230,66,.1); }
     .loading-retry.visible { display: block; }
+    /* ── Rapid Fire tab ────────────────────────────────── */
+    .rf-count-picker {
+      display: flex; gap: 10px; margin-bottom: 16px;
+    }
+    .rf-count-btn {
+      flex: 1; padding: 18px 10px;
+      background: var(--navy3);
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      color: var(--grey);
+      font-family: var(--font);
+      font-size: 1.5rem; font-weight: 900;
+      cursor: pointer;
+      transition: border-color .15s, background .15s, color .15s;
+      text-align: center;
+    }
+    .rf-count-btn .rf-sub {
+      display: block; font-size: .68rem;
+      font-weight: 600; letter-spacing: 1px;
+      text-transform: uppercase; margin-top: 4px;
+      color: inherit; opacity: .7;
+    }
+    .rf-count-btn:hover { border-color: var(--pink); color: var(--white); }
+    .rf-count-btn.selected {
+      border-color: var(--pink);
+      background: rgba(255,79,163,.1);
+      color: var(--pink);
+    }
+
+    /* ── Rapid Fire question screen ────────────────────── */
+    .rf-score-bar {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 14px;
+    }
+    .rf-score-display {
+      font-family: var(--mono); font-size: 1rem; font-weight: 700;
+    }
+    .rf-score-display .rf-score-val {
+      color: var(--yellow); font-size: 1.3rem;
+    }
+    .rf-score-display .rf-score-val.negative { color: var(--red); }
+
+    /* ── Score delta pop animation ─────────────────────── */
+    .score-delta {
+      position: absolute; top: -8px; right: -8px;
+      font-family: var(--mono); font-size: .85rem; font-weight: 900;
+      padding: 2px 7px; border-radius: 20px;
+      pointer-events: none;
+      animation: deltaPop .9s ease forwards;
+      z-index: 10;
+    }
+    .score-delta.plus  { background: var(--green);  color: var(--navy); }
+    .score-delta.minus { background: var(--red);    color: #fff; }
+    .score-delta.zero  { background: var(--grey);   color: var(--navy); }
+    @keyframes deltaPop {
+      0%   { opacity: 1; transform: translateY(0)   scale(1); }
+      60%  { opacity: 1; transform: translateY(-16px) scale(1.15); }
+      100% { opacity: 0; transform: translateY(-28px) scale(.9); }
+    }
+
+    /* ── Rapid Fire result screen ──────────────────────── */
+    .rf-result-score {
+      text-align: center; margin-bottom: 18px;
+    }
+    .rf-result-score .rf-final-label {
+      font-size: .72rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 2px;
+      color: var(--grey); font-family: var(--mono);
+      margin-bottom: 4px;
+    }
+    .rf-result-score .rf-final-num {
+      font-size: 3.5rem; font-weight: 900;
+      line-height: 1; color: var(--yellow);
+      text-shadow: var(--glow);
+      font-family: var(--mono);
+    }
+    .rf-result-score .rf-final-num.negative { color: var(--red); }
+    .rf-result-score .rf-perf-label {
+      font-size: 1rem; font-weight: 700;
+      color: var(--white); margin-top: 6px;
+    }
+    .rf-stats-row {
+      display: flex; gap: 8px; margin-bottom: 18px;
+    }
+    .rf-stat-tile {
+      flex: 1; padding: 10px 6px;
+      background: var(--navy3);
+      border: 1px solid var(--border);
+      border-radius: 8px; text-align: center;
+    }
+    .rf-stat-tile .rf-stat-val {
+      font-size: 1.4rem; font-weight: 900;
+      font-family: var(--mono);
+    }
+    .rf-stat-tile .rf-stat-val.c { color: var(--green); }
+    .rf-stat-tile .rf-stat-val.w { color: var(--red); }
+    .rf-stat-tile .rf-stat-val.u { color: var(--grey); }
+    .rf-stat-tile .rf-stat-label {
+      font-size: .62rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 1.5px;
+      color: var(--grey); font-family: var(--mono);
+      margin-top: 2px;
+    }
   </style>
 </head>
 <body>
@@ -958,6 +1061,7 @@
       <div class="tabs">
         <button class="tab active" onclick="switchTab('join')">Join Game</button>
         <button class="tab" onclick="switchTab('host')">Host Game</button>
+        <button class="tab" onclick="switchTab('rapid')">⚡ Solo</button>
       </div>
 
       <!-- Join tab -->
@@ -1008,6 +1112,26 @@
         <p style="font-size:.8rem;color:var(--grey);text-align:center;line-height:1.5">
           As host you'll get a 6-8 character Game ID.<br>Share it with friends to join!
         </p>
+      </div>
+
+      <!-- Rapid Fire tab -->
+      <div id="tab-rapid" style="display:none">
+        <p style="font-size:.82rem;color:var(--grey);text-align:center;line-height:1.5;margin-bottom:16px;font-family:var(--mono)">
+          Solo mode · 5 seconds per question<br>Answer fast — no second chances
+        </p>
+        <div class="rf-count-picker">
+          <button class="rf-count-btn selected" id="rf-btn-12" onclick="selectRapidCount(12)">
+            12
+            <span class="rf-sub">questions</span>
+          </button>
+          <button class="rf-count-btn" id="rf-btn-24" onclick="selectRapidCount(24)">
+            24
+            <span class="rf-sub">questions</span>
+          </button>
+        </div>
+        <button class="btn btn-primary" style="background:var(--pink);box-shadow:0 4px 20px rgba(255,79,163,.35)" onclick="startRapidFire()">
+          ⚡ Start Rapid Fire
+        </button>
       </div>
     </div>
 
@@ -1100,6 +1224,56 @@
     </div><!-- /help-section -->
 
   </div><!-- /screen-home -->
+
+  <!-- ══ SCREEN: Rapid Fire Question ══════════════════════════════════════ -->
+  <div id="screen-rapidfire" class="screen fade-in">
+    <div class="card" style="flex:1;display:flex;flex-direction:column">
+      <div class="rf-score-bar">
+        <span class="q-progress" id="rf-progress">Q 1 / 12</span>
+        <span class="rf-score-display">Score: <span class="rf-score-val" id="rf-score-val">0</span></span>
+      </div>
+      <div class="q-timer-bar-wrap">
+        <div class="q-timer-bar" id="rf-timer-bar" style="width:100%"></div>
+      </div>
+      <div class="q-timer-num" id="rf-timer-num">5</div>
+      <span class="q-category" id="rf-category" style="display:inline-block;margin-bottom:12px"></span>
+      <div class="q-text" id="rf-text">Loading…</div>
+      <div class="options-grid" id="rf-options-grid" style="position:relative;margin-top:auto"></div>
+    </div>
+  </div>
+
+  <!-- ══ SCREEN: Rapid Fire Result ════════════════════════════════════════ -->
+  <div id="screen-rapidfire-result" class="screen fade-in">
+    <div class="logo">
+      <h1>Quiz<em class="bolt">⚡</em>Kombat</h1>
+    </div>
+    <div class="card">
+      <div class="rf-result-score">
+        <div class="rf-final-label">Final Score</div>
+        <div class="rf-final-num" id="rf-final-num">0</div>
+        <div class="rf-perf-label" id="rf-perf-label"></div>
+      </div>
+      <div class="rf-stats-row">
+        <div class="rf-stat-tile">
+          <div class="rf-stat-val c" id="rf-stat-correct">0</div>
+          <div class="rf-stat-label">Correct</div>
+        </div>
+        <div class="rf-stat-tile">
+          <div class="rf-stat-val w" id="rf-stat-wrong">0</div>
+          <div class="rf-stat-label">Wrong</div>
+        </div>
+        <div class="rf-stat-tile">
+          <div class="rf-stat-val u" id="rf-stat-unanswered">0</div>
+          <div class="rf-stat-label">Skipped</div>
+        </div>
+      </div>
+      <button class="btn btn-primary"
+              style="background:var(--pink);box-shadow:0 4px 20px rgba(255,79,163,.35);margin-bottom:10px"
+              onclick="replayRapidFire()">⚡ Play Again</button>
+      <button class="btn btn-secondary" onclick="showScreen('home')">← Back to Home</button>
+    </div>
+  </div>
+
   <div id="screen-lobby" class="screen fade-in">
     <div class="logo">
       <h1>Quiz<em class="bolt">⚡</em>Kombat</h1>
@@ -1347,10 +1521,15 @@ function showScreen(id) {
 
 function switchTab(tab) {
   document.querySelectorAll('.tab').forEach((t, i) => {
-    t.classList.toggle('active', (i === 0 && tab === 'join') || (i === 1 && tab === 'host'));
+    t.classList.toggle('active',
+      (i === 0 && tab === 'join') ||
+      (i === 1 && tab === 'host') ||
+      (i === 2 && tab === 'rapid')
+    );
   });
-  document.getElementById('tab-join').style.display = tab === 'join' ? '' : 'none';
-  document.getElementById('tab-host').style.display = tab === 'host' ? '' : 'none';
+  document.getElementById('tab-join').style.display  = tab === 'join'  ? '' : 'none';
+  document.getElementById('tab-host').style.display  = tab === 'host'  ? '' : 'none';
+  document.getElementById('tab-rapid').style.display = tab === 'rapid' ? '' : 'none';
   // Fetch categories the first time the host tab is opened
   if (tab === 'host' && availableCategories.length === 0) {
     fetchCategories();
@@ -1371,6 +1550,203 @@ function toggleHelp() {
   const isOpen = body.classList.contains('open');
   toggle.classList.toggle('open', !isOpen);
   body.classList.toggle('open', !isOpen);
+}
+
+// ── Rapid Fire ────────────────────────────────────────────────────────────────
+const rf = {
+  questions:       [],
+  currentIndex:    0,
+  score:           0,
+  correct:         0,
+  wrong:           0,
+  unanswered:      0,
+  timePerQuestion: 5,
+  scoring:         { correct: 1, wrong: -1, unanswered: 0 },
+  timer:           null,
+  selectedCount:   12,
+  timerStart:      0,
+};
+
+function selectRapidCount(n) {
+  rf.selectedCount = n;
+  document.getElementById('rf-btn-12').classList.toggle('selected', n === 12);
+  document.getElementById('rf-btn-24').classList.toggle('selected', n === 24);
+}
+
+async function startRapidFire() {
+  const btn = document.querySelector('#tab-rapid .btn-primary');
+  if (btn.disabled) return;
+  btn.disabled = true;
+  btn.textContent = 'Loading…';
+
+  try {
+    const res = await fetch(API(`/api/rapid-fire/questions?count=${rf.selectedCount}`));
+    if (!res.ok) throw new Error('Failed to fetch questions');
+    const data = await res.json();
+
+    // Initialise state from server response
+    rf.questions       = data.questions;
+    rf.timePerQuestion = data.time_per_question;
+    rf.scoring         = data.scoring;
+    rf.currentIndex    = 0;
+    rf.score           = 0;
+    rf.correct         = 0;
+    rf.wrong           = 0;
+    rf.unanswered      = 0;
+
+    showScreen('rapidfire');
+    showRapidFireQuestion(0);
+  } catch {
+    btn.disabled = false;
+    btn.textContent = '⚡ Start Rapid Fire';
+    alert('Could not load questions. Please try again.');
+  }
+}
+
+function showRapidFireQuestion(index) {
+  const q   = rf.questions[index];
+  const tot = rf.questions.length;
+
+  document.getElementById('rf-progress').textContent = `Q ${index + 1} / ${tot}`;
+  document.getElementById('rf-category').textContent = q.category || '';
+  document.getElementById('rf-text').textContent     = q.text;
+
+  // Score display
+  const scoreEl = document.getElementById('rf-score-val');
+  scoreEl.textContent = rf.score;
+  scoreEl.className   = 'rf-score-val' + (rf.score < 0 ? ' negative' : '');
+
+  // Timer bar reset
+  const bar = document.getElementById('rf-timer-bar');
+  bar.style.transition = 'none';
+  bar.style.width      = '100%';
+  bar.classList.remove('warning');
+
+  // Options
+  const grid = document.getElementById('rf-options-grid');
+  grid.className = 'options-grid' + (q.type === 'truefalse' ? ' truefalse' : '');
+  grid.style.position = 'relative';
+  grid.innerHTML = q.options.map(opt =>
+    `<button class="option-btn" onclick="submitRapidFireAnswer(this,'${esc(opt)}')">${esc(opt)}</button>`
+  ).join('');
+
+  // Start countdown
+  if (rf.timer) clearInterval(rf.timer);
+  rf.timerStart = Date.now();
+  rf.timer = setInterval(() => rapidFireTick(index), 100);
+}
+
+function rapidFireTick(index) {
+  const elapsed   = (Date.now() - rf.timerStart) / 1000;
+  const remaining = Math.max(0, rf.timePerQuestion - elapsed);
+  const pct       = remaining / rf.timePerQuestion;
+
+  const bar = document.getElementById('rf-timer-bar');
+  const num = document.getElementById('rf-timer-num');
+
+  // Use requestAnimationFrame-friendly transition after first frame
+  bar.style.transition = 'width .1s linear';
+  bar.style.width      = (pct * 100) + '%';
+  bar.classList.toggle('warning', pct < 0.35);
+  num.textContent = Math.ceil(remaining);
+  num.classList.toggle('urgent', remaining < 3);
+
+  if (remaining <= 0) {
+    clearInterval(rf.timer);
+    rf.timer = null;
+    // Time expired — unanswered
+    rf.unanswered++;
+    showDelta(null, rf.scoring.unanswered);
+    disableRapidOptions();
+    setTimeout(() => advanceRapidFire(), 900);
+  }
+}
+
+function submitRapidFireAnswer(btn, answer) {
+  if (rf.timer === null) return;   // already expired
+  clearInterval(rf.timer);
+  rf.timer = null;
+
+  const q       = rf.questions[rf.currentIndex];
+  const correct = answer === q.correct;
+
+  if (correct) {
+    rf.score  += rf.scoring.correct;
+    rf.correct++;
+    btn.classList.add('correct');
+    showDelta(btn, rf.scoring.correct);
+  } else {
+    rf.score += rf.scoring.wrong;
+    rf.wrong++;
+    btn.classList.add('incorrect');
+    showDelta(btn, rf.scoring.wrong);
+    // Reveal correct answer
+    document.querySelectorAll('#rf-options-grid .option-btn').forEach(b => {
+      if (b.textContent === q.correct) b.classList.add('correct');
+    });
+  }
+
+  disableRapidOptions();
+  setTimeout(() => advanceRapidFire(), 900);
+}
+
+function disableRapidOptions() {
+  document.querySelectorAll('#rf-options-grid .option-btn').forEach(b => b.disabled = true);
+}
+
+function showDelta(anchorBtn, points) {
+  // Float a +1 / -1 / 0 badge over the answer button (or top-right of grid)
+  const grid = document.getElementById('rf-options-grid');
+  const badge = document.createElement('div');
+  badge.className = 'score-delta ' + (points > 0 ? 'plus' : points < 0 ? 'minus' : 'zero');
+  badge.textContent = points > 0 ? `+${points}` : `${points}`;
+  grid.appendChild(badge);
+  badge.addEventListener('animationend', () => badge.remove());
+}
+
+function advanceRapidFire() {
+  const next = rf.currentIndex + 1;
+  if (next >= rf.questions.length) {
+    showRapidFireResult();
+  } else {
+    rf.currentIndex = next;
+    showRapidFireQuestion(next);
+  }
+}
+
+function showRapidFireResult() {
+  if (rf.timer) { clearInterval(rf.timer); rf.timer = null; }
+  showScreen('rapidfire-result');
+
+  const total = rf.questions.length;
+
+  // Score display
+  const numEl = document.getElementById('rf-final-num');
+  numEl.textContent = rf.score;
+  numEl.className   = 'rf-final-num' + (rf.score < 0 ? ' negative' : '');
+
+  // Performance label
+  const pct   = rf.correct / total;
+  const label = pct === 1    ? '🏆 Perfect! Flawless run!'
+              : pct >= 0.8   ? '🔥 Outstanding!'
+              : pct >= 0.6   ? '⚡ Sharp reflexes!'
+              : pct >= 0.4   ? '👍 Decent effort!'
+              : pct >= 0.2   ? '📚 Keep practicing!'
+              :                '💀 Rough round…';
+  document.getElementById('rf-perf-label').textContent = label;
+
+  // Stats
+  document.getElementById('rf-stat-correct').textContent   = rf.correct;
+  document.getElementById('rf-stat-wrong').textContent     = rf.wrong;
+  document.getElementById('rf-stat-unanswered').textContent = rf.unanswered;
+
+  // Re-enable the start button for when user returns to home
+  const btn = document.querySelector('#tab-rapid .btn-primary');
+  if (btn) { btn.disabled = false; btn.textContent = '⚡ Start Rapid Fire'; }
+}
+
+function replayRapidFire() {
+  startRapidFire();
 }
 
 // ── Create game ───────────────────────────────────────────────────────────────
