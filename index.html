@@ -1151,7 +1151,7 @@
       <!-- Rapid Fire tab -->
       <div id="tab-rapid" style="display:none">
         <p style="font-size:.82rem;color:var(--grey);text-align:center;line-height:1.5;margin-bottom:16px;font-family:var(--mono)">
-          Solo mode · 3 seconds per question<br>Answer fast — no second chances
+          Solo mode · 5 seconds per question<br>Answer fast — no second chances
         </p>
         <div class="rf-count-picker">
           <button class="rf-count-btn selected" id="rf-btn-12" onclick="selectRapidCount(12)">
@@ -1251,6 +1251,46 @@
             <div class="help-tip"><span class="tip-icon">🔄</span>Accidentally refresh? A <strong>Rejoin</strong> prompt will appear to get you back into the game.</div>
             <div class="help-tip"><span class="tip-icon">🛑</span>The host can end the game at any time from the End Game button — final scores are shown immediately.</div>
             <div class="help-tip"><span class="tip-icon">🏷️</span>Equal scores share the same rank — ties are shown fairly on the leaderboard.</div>
+          </div>
+        </div>
+
+        <!-- Solo Mode -->
+        <div class="help-block">
+          <div class="help-block-title"><span class="hicon">⚡</span>Solo Mode — Rapid Fire</div>
+          <div class="help-steps">
+            <div class="help-step">
+              <div class="help-step-num">1</div>
+              <div class="help-step-text">Open the <strong>⚡ Solo</strong> tab, pick either <strong>12</strong> or <strong>24</strong> questions, then hit <strong>Start Rapid Fire</strong>. No name or Game ID needed.</div>
+            </div>
+            <div class="help-step">
+              <div class="help-step-num">2</div>
+              <div class="help-step-text">Each question has only <strong>5 seconds</strong>. The timer bar drains fast — trust your instincts.</div>
+            </div>
+            <div class="help-step">
+              <div class="help-step-num">3</div>
+              <div class="help-step-text">After you answer (or time runs out), the correct answer is revealed instantly and the next question loads automatically after a brief pause.</div>
+            </div>
+            <div class="help-step">
+              <div class="help-step-num">4</div>
+              <div class="help-step-text">At the end your <strong>final score</strong>, correct count, wrong count, and skipped count are shown with a performance rating.</div>
+            </div>
+          </div>
+          <div class="help-score-box" style="margin-top:12px">
+            <div class="score-line">
+              <span class="score-label">Correct answer</span>
+              <span class="score-val good">+3 pt</span>
+            </div>
+            <div class="score-line">
+              <span class="score-label">Wrong answer</span>
+              <span class="score-val bad">−1 pt</span>
+            </div>
+            <div class="score-line">
+              <span class="score-label">No answer (time up)</span>
+              <span class="score-val" style="color:var(--grey)">0 pts</span>
+            </div>
+          </div>
+          <div class="help-example" style="margin-top:10px">
+            <strong>Note:</strong> Wrong answers <em>cost you a point</em> — guessing randomly can hurt your score. Skip (let the timer run out) if you're unsure.
           </div>
         </div>
 
@@ -1597,7 +1637,7 @@ const rf = {
   wrong:           0,
   unanswered:      0,
   timePerQuestion: 5,
-  scoring:         { correct: 1, wrong: -1, unanswered: 0 },
+  scoring:         { correct: 3, wrong: -1, unanswered: 0 },
   timer:           null,
   selectedCount:   12,
   timerStart:      0,
