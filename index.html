@@ -501,6 +501,40 @@
       color: var(--grey); font-family: var(--mono);
       margin-top: 14px;
     }
+    .next-hint .countdown-num {
+      color: var(--yellow); font-weight: 700;
+    }
+
+    /* ── Player answer result banner ───────────────────── */
+    .lb-answer-result {
+      display: flex; align-items: center; gap: 10px;
+      border-radius: 10px; padding: 12px 14px;
+      margin-bottom: 14px;
+      font-weight: 700; font-size: .9rem;
+      animation: fadeIn .3s ease;
+    }
+    .lb-answer-result.correct {
+      background: rgba(61,255,143,.1);
+      border: 1.5px solid rgba(61,255,143,.35);
+      color: var(--green);
+    }
+    .lb-answer-result.wrong {
+      background: rgba(255,79,79,.1);
+      border: 1.5px solid rgba(255,79,79,.35);
+      color: var(--red);
+    }
+    .lb-answer-result.unanswered {
+      background: rgba(136,153,187,.08);
+      border: 1.5px solid rgba(136,153,187,.2);
+      color: var(--grey);
+    }
+    .lb-answer-result .lar-icon { font-size: 1.3rem; flex-shrink: 0; }
+    .lb-answer-result .lar-text { line-height: 1.4; }
+    .lb-answer-result .lar-sub  {
+      font-size: .72rem; font-weight: 400;
+      opacity: .8; display: block; margin-top: 2px;
+      font-family: var(--mono);
+    }
 
     /* ── Game over ─────────────────────────────────────── */
     .gameover-banner {
@@ -1379,6 +1413,7 @@
         <h2>🏆 Leaderboard</h2>
         <div class="correct-answer">Correct answer: <span id="lb-correct">—</span></div>
       </div>
+      <div class="lb-answer-result" id="lb-answer-result" style="display:none"></div>
       <div class="lb-list" id="lb-list"></div>
       <div class="next-hint" id="next-hint"></div>
     </div>
@@ -1409,6 +1444,7 @@ const state = {
   isHost: false,
   ws: null,
   questionTimer: null,
+  leaderboardTimer: null,
   questionStart: null,
   questionDuration: 35,
   currentAnswer: null,
@@ -1936,6 +1972,10 @@ function lockUI(message) {
   clearInterval(state.questionTimer);
   state.questionTimer = null;
 
+  // Stop any running leaderboard countdown
+  clearInterval(state.leaderboardTimer);
+  state.leaderboardTimer = null;
+
   // Disable all answer buttons
   document.querySelectorAll('.option-btn').forEach(b => b.disabled = true);
 
@@ -2233,17 +2273,84 @@ function renderLeaderboardRows(leaderboard, totalQuestions, animDelay = 0.06) {
 // ── Leaderboard ───────────────────────────────────────────────────────────────
 function showLeaderboard(msg) {
   clearInterval(state.questionTimer);
+  // Clear any previous leaderboard countdown
+  clearInterval(state.leaderboardTimer);
+  state.leaderboardTimer = null;
+
   showScreen('leaderboard');
 
   document.getElementById('lb-correct').textContent = msg.correct_answer;
 
-  const isLast = msg.question_index + 1 >= msg.total_questions;
-  document.getElementById('next-hint').textContent = isLast
-    ? 'Final leaderboard incoming…'
-    : `Next question in ${6} seconds…`;
+  // ── Answer result banner ───────────────────────────────
+  const resultEl  = document.getElementById('lb-answer-result');
+  const myResult  = msg.answer_results && msg.answer_results[state.playerId];
 
+  if (myResult) {
+    resultEl.style.display = '';
+    if (myResult.correct) {
+      resultEl.className = 'lb-answer-result correct';
+      resultEl.innerHTML = `
+        <span class="lar-icon">✅</span>
+        <span class="lar-text">Correct!
+          <span class="lar-sub">+${myResult.score !== undefined
+            ? (myResult.score - (msg.leaderboard.find(p => p.player_id === state.playerId)?.score ?? myResult.score) + myResult.score).toFixed(2)
+            : '…'} pts this round</span>
+        </span>`;
+      // Simpler: just show "Correct!" with the answer they gave
+      resultEl.innerHTML = `
+        <span class="lar-icon">✅</span>
+        <span class="lar-text">Correct!
+          <span class="lar-sub">Your answer: ${esc(myResult.answer)}</span>
+        </span>`;
+    } else if (myResult.answer) {
+      resultEl.className = 'lb-answer-result wrong';
+      resultEl.innerHTML = `
+        <span class="lar-icon">❌</span>
+        <span class="lar-text">Wrong answer
+          <span class="lar-sub">You answered: ${esc(myResult.answer)} · Correct: ${esc(msg.correct_answer)}</span>
+        </span>`;
+    } else {
+      resultEl.className = 'lb-answer-result unanswered';
+      resultEl.innerHTML = `
+        <span class="lar-icon">⏰</span>
+        <span class="lar-text">Time's up — no answer submitted
+          <span class="lar-sub">Correct answer: ${esc(msg.correct_answer)}</span>
+        </span>`;
+    }
+  } else {
+    resultEl.style.display = 'none';
+  }
+
+  // ── Leaderboard rows ──────────────────────────────────
   document.getElementById('lb-list').innerHTML =
     renderLeaderboardRows(msg.leaderboard, msg.total_questions, 0.06);
+
+  // ── Countdown hint ────────────────────────────────────
+  const hintEl = document.getElementById('next-hint');
+  const isLast = msg.question_index + 1 >= msg.total_questions;
+
+  if (isLast) {
+    hintEl.textContent = 'Final leaderboard incoming…';
+  } else {
+    const LEADERBOARD_SECS = 6;
+    let remaining = LEADERBOARD_SECS;
+
+    const update = () => {
+      hintEl.innerHTML = `Next question in <span class="countdown-num">${remaining}</span>s…`;
+    };
+    update();
+
+    state.leaderboardTimer = setInterval(() => {
+      remaining--;
+      if (remaining <= 0) {
+        clearInterval(state.leaderboardTimer);
+        state.leaderboardTimer = null;
+        hintEl.innerHTML = `Next question in <span class="countdown-num">0</span>s…`;
+      } else {
+        update();
+      }
+    }, 1000);
+  }
 }
 
 // ── Game Over ─────────────────────────────────────────────────────────────────
