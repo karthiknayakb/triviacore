@@ -47,7 +47,7 @@ ALL_ANSWERED_WAIT_SECONDS = int(os.getenv("ALL_ANSWERED_WAIT_SECONDS",2)) # paus
 
 # ── Rapid Fire constants ──────────────────────────────────────────────────────
 RAPID_FIRE_QUESTION_COUNTS  = [12, 24]   # allowed question counts
-RAPID_FIRE_TIME_PER_QUESTION = int(os.getenv("RAPID_FIRE_TIME_PER_QUESTION", 5))
+RAPID_FIRE_TIME_PER_QUESTION = int(os.getenv("RAPID_FIRE_TIME_PER_QUESTION", 3))
 RAPID_FIRE_CORRECT_POINTS    = int(os.getenv("RAPID_FIRE_CORRECT_POINTS",    1))
 RAPID_FIRE_WRONG_POINTS      = int(os.getenv("RAPID_FIRE_WRONG_POINTS",     -1))
 RAPID_FIRE_UNANSWERED_POINTS = int(os.getenv("RAPID_FIRE_UNANSWERED_POINTS", 0))
